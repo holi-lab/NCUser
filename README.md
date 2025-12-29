@@ -16,7 +16,6 @@ This repository contains the complete source code for experiments on non-collabo
   - [Configuration](#tau-bench-configuration)
   - [Running Experiments](#tau-bench-running-experiments)
   - [Analysis](#tau-bench-analysis)
-- [Extension (ColBench, MINT)](#extension-colbench-mint)
 
 ---
 
@@ -494,8 +493,17 @@ All inference results used in our paper are available on Google Drive:
 
 [Google Drive Link](https://drive.google.com/drive/u/0/folders/1_UQZlT3fjg38gLqhzxQCMY-AQdWDQtC9)
 
----
+## Citation
 
-## Extension (ColBench, MINT)
+```
+@misc{shim2025noncollaborativeusersimulatorstool,
+      title={Non-Collaborative User Simulators for Tool Agents}, 
+      author={Jeonghoon Shim and Woojung Song and Cheyon Jin and Seungwon KooK and Yohan Jo},
+      year={2025},
+      eprint={2509.23124},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2509.23124}, 
+}
+```
 
-We extended our user simulator beyond MultiWOZ and Tau-Bench to ColBench and MINT. The source code for these extensions is included in this repository.
