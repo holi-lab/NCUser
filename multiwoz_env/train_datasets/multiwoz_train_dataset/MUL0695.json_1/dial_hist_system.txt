@@ -1,0 +1,199 @@
+You are a competent Tool Agent. You can solve user requests by executing various APIs during multi-turn conversations with user. Through conversations across multiple turns, you can ask users for information, provide answers, and perform user requests by making appropriate API calls.
+
+Here are three key APIs that you need to know to get more information
+
+# To get a list of apps that are available to you.
+→ API call{'api_name':'show_app_description','input_parameters':{}}
+
+# To get the list of apis under any app listed above, e.g. train
+→ API call{'api_name':'show_api_description','input_parameters':{'app_name'='train'}}
+
+# To get the specification of a particular api, e.g. train_book
+→ API call{'api_name':'show_api_docs','input_parameters':{'app_name'='train', 'api_name'='train_book'}}
+
+Notes:
+- Input parameters must strictly follow the API documentation. Only the parameters defined there should be used.
+- If a parameter has a list of allowed values specified under "constraints", you must use only values from that list.
+
+Based on this, you have to types of action.
+
+1. API call: When all input parameters can be collected during the conversation, execute the API call
+When performing an "API call" action, both the name of the API to be called and the input parameter information used for the call must be included.
+Example 1:
+When calling the play_kpop_music API with 'id'=3 (int type) and 'duration'='4' (string type):
+→ API call{'api_name':'play_kpop_music','input_parameters':{'id':3,'duration':'4'}}
+Example 2:
+When calling the book_flight API with 'from'='2025-03-01' (string type) and 'to'='2025-03-05' (string type):
+→ API call{'api_name':'book_flight','input_parameters':{'from':'2025-03-01','to':'2025-03-05'}}
+
+Notes:
+- Input parameters must strictly follow the API documentation. Only the parameters defined there should be used.
+- If a parameter has a list of allowed values specified under "constraints", you must use only values from that list.
+
+4. Talk: An action that communicates with the user through dialogue:
+You can take utterance related action such as:
+- Asking users about API input parameters
+- Responding based on API execution results
+- Notifying users that the request has been completed
+- When the user says thank you, ask if they have any other requests just to make sure.
+- If there is truly no way to provide the information, persuade the user to understand and give up, or suggest an alternative approach.
+- Suggestion of alternative options with similar time slots when no exact match is available for the user's requested time.
+
+or use the most appropriate action for the situation to communicate with the user, even if it is not among the listed actions.
+
+When performing "Talk" action to ask something to user:
+→ Talk(<Your utterance>)
+------------------------------------------------------
+Based on the given instruction, you have to return the thought and action in given form:
+The return format varies depending on the case. Given any dialogue history:
+
+1. When action is "API call", the action form should be:
+- Thought: <Consider the dialogue context and API call results before selecting the next action>
+- Action: API call{'api_name':<api-name>,'input_parameters':{'param1':'value1','param2':'value2}}
+
+2. When action is "Talk":
+- Thought: <Consider the dialogue context and API call results before selecting the next action>
+- Action: Talk("A message to user")
+
+System Rules:
+1. Don't ask the ID from the user. You can get it from another API.
+2. If the user specifies a time with the condition "arrive by," the system must provide only entities whose arrival time is equal to or earlier than the specified time. It doesn't matter if there's a big difference; an earlier time is fine.
+3. If the user specifies a time with the condition "leave at," the system must provide only entities whose leaving time is equal to or later than the specified time. It doesn't matter if there's a big difference; an later time is fine.
+4. Only conditions 2 and 3 related to time need to be satisfied. It is acceptable even if the provided time is far from the time specified by the user.
+5. If you want to make new reservation on same domain, you have to cancel a previous reservation. Only one entity booking is available for each domain. Use the Retriever to find the API for canceling reservations and proceed with the cancellation.
+6. What the user wants is to book exactly one entity for each requested domain. Collect the information provided by the user appropriately so that, in the end, only one entity is booked per domain as requested by the user.
+7. If the conversation between you and the user exceeds 16 turns, it will be terminated. Therefore, within that limit, you must review the user and the dialogue history, accurately identify the request, and solve it.
+
+Now, based on the given dialogue history, generate the next thought and action in the provided format. Generate only the given format and don't generate any other words.
+
+# Dialogue history:
+
+
+User: I'm looking for a train departing from Cambridge to Stansted Airport on Saturday. It should leave after 10:15. Could you help me find that?
+
+- Thought: The user is looking for a train from Cambridge to Stansted Airport on Saturday with a departure time after 10:15. I need to check which apps are available to find the relevant train booking app and its API for searching trains.
+- Action: API call{'api_name':'show_app_description','input_parameters':{}}
+
+Observation: {'success': True, 'result': [{'name': 'train', 'description': 'An app capable of retrieving or booking train schedules.'}, {'name': 'accommodation', 'description': 'An app capable of retrieving or booking accommodation.'}, {'name': 'restaurant', 'description': 'An app capable of retrieving or restaurant.'}, {'name': 'taxi', 'description': 'An app capable of retrieving or booking taxi.'}, {'name': 'general', 'description': 'supporting APIs such as book canceling'}]}
+
+- Thought: The "train" app is suitable for retrieving or booking train schedules. I need to see the APIs available under the "train" app to find the one related to searching for trains.
+- Action: API call{'api_name':'show_api_description','input_parameters':{'app_name':'train'}}
+
+Observation: {'success': True, 'result': [{'name': 'train_retrieve', 'description': 'Retrieves an train schedule list from the database that matches the given input parameter conditions. Up to 7 results will be displayed, and the rest will be truncated and not shown.'}, {'name': 'train_book', 'description': 'Book the specific train schedule with the given input parameter options.'}]}
+
+- Thought: The "train_retrieve" API retrieves train schedules that match given conditions, which fits the user's request to find a train from Cambridge to Stansted Airport on Saturday leaving after 10:15. I need to check the detailed specification of the "train_retrieve" API to understand all required input parameters.
+- Action: API call{'api_name':'show_api_docs','input_parameters':{'app_name':'train','api_name':'train_retrieve'}}
+
+Observation: {'success': True, 'result': {'app_name': 'train', 'api_name': 'train_retrieve', 'method': 'GET', 'description': 'Retrieves an train schedule list from the database that matches the given input parameter conditions. Up to 7 results will be displayed, and the rest will be truncated and not shown.', 'parameters': [{'name': 'departure', 'type': 'string', 'required': False, 'description': "The train's departure location. Must be entered in lowercase.", 'default': None, 'constraints': []}, {'name': 'destination', 'type': 'string', 'required': False, 'description': "The train's destination location. Must be entered in lowercase.", 'default': None, 'constraints': []}, {'name': 'day', 'type': 'str', 'required': False, 'description': 'The day of the week the train departs', 'default': None, 'constraints': ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']}], 'response_schemas': {'success': {'success': 'bool', 'result': [{'train_schedule_id': 'string', 'arriveBy': 'string', 'day': 'string', 'departure': 'string', 'destination': 'string', 'duration': 'string', 'leaveAt': 'string', 'price': 'string', 'trainID': 'string'}]}, 'failure': {'success': 'bool', 'result': {'message': 'string'}}}}}
+
+- Thought: The "train_retrieve" API requires departure, destination, and day (among optional parameters) to find train schedules. The user wants a train from Cambridge to Stansted Airport on Saturday leaving after 10:15. I'll call the train_retrieve API with departure='cambridge', destination='stansted airport', and day='saturday' and then filter results for those leaving after 10:15.
+- Action: API call{'api_name':'train_retrieve','input_parameters':{'departure':'cambridge','destination':'stansted airport','day':'saturday'}}
+
+Observation: {'success': True, 'result': [{'train_schedule_id': '1579', 'arriveBy': '06:08', 'day': 'saturday', 'departure': 'cambridge', 'destination': 'stansted airport', 'duration': '28 minutes', 'leaveAt': '05:40', 'price': '8.08 pounds', 'trainID': 'TR7400'}, {'train_schedule_id': '1580', 'arriveBy': '07:08', 'day': 'saturday', 'departure': 'cambridge', 'destination': 'stansted airport', 'duration': '28 minutes', 'leaveAt': '06:40', 'price': '8.08 pounds', 'trainID': 'TR8598'}, {'train_schedule_id': '1581', 'arriveBy': '08:08', 'day': 'saturday', 'departure': 'cambridge', 'destination': 'stansted airport', 'duration': '28 minutes', 'leaveAt': '07:40', 'price': '8.08 pounds', 'trainID': 'TR0335'}, {'train_schedule_id': '1582', 'arriveBy': '09:08', 'day': 'saturday', 'departure': 'cambridge', 'destination': 'stansted airport', 'duration': '28 minutes', 'leaveAt': '08:40', 'price': '8.08 pounds', 'trainID': 'TR5580'}, {'train_schedule_id': '1583', 'arriveBy': '10:08', 'day': 'saturday', 'departure': 'cambridge', 'destination': 'stansted airport', 'duration': '28 minutes', 'leaveAt': '09:40', 'price': '8.08 pounds', 'trainID': 'TR2755'}, {'train_schedule_id': '1584', 'arriveBy': '11:08', 'day': 'saturday', 'departure': 'cambridge', 'destination': 'stansted airport', 'duration': '28 minutes', 'leaveAt': '10:40', 'price': '8.08 pounds', 'trainID': 'TR4508'}, {'train_schedule_id': '1585', 'arriveBy': '12:08', 'day': 'saturday', 'departure': 'cambridge', 'destination': 'stansted airport', 'duration': '28 minutes', 'leaveAt': '11:40', 'price': '8.08 pounds', 'trainID': 'TR3373'}]}
+
+- Thought: The available trains from Cambridge to Stansted Airport on Saturday depart at 05:40, 06:40, 07:40, 08:40, 09:40, 10:40, and 11:40. The user wants a train leaving after 10:15, so the suitable options are the trains leaving at 10:40 and 11:40. I will present these two options to the user and ask for their preferred departure time.
+- Action: Talk("I found two trains from Cambridge to Stansted Airport on Saturday that leave after 10:15: one at 10:40 and another at 11:40. Which departure time do you prefer?")
+
+Observation: {}
+
+User: Please book the train leaving at 10:40 for 4 people.
+
+- Thought: The user wants to book the train leaving at 10:40 from Cambridge to Stansted Airport on Saturday for 4 people. I need to use the train_book API to book this specific train. I need to check the train_book API documentation to understand the required input parameters for booking.
+- Action: API call{'api_name':'show_api_docs','input_parameters':{'app_name':'train','api_name':'train_book'}}
+
+Observation: {'success': True, 'result': {'app_name': 'train', 'api_name': 'train_book', 'method': 'POST', 'description': 'Book the specific train schedule with the given input parameter options.', 'parameters': [{'name': 'train_schedule_id', 'type': 'int', 'required': True, 'description': 'Unique id of the specific restaurant.', 'default': None, 'constraints': []}, {'name': 'people', 'type': 'int', 'required': True, 'description': 'The number of people to use the restaurant service.', 'default': None, 'constraints': []}], 'response_schemas': {'success': {'success': 'bool', 'result': {'message': 'string'}}, 'failure': {'success': 'bool', 'result': {'message': 'string'}}}}}
+
+- Thought: The train_book API requires train_schedule_id as an integer and number of people as an integer. I have the train_schedule_id for the train leaving at 10:40, which is 1584, and the user wants to book for 4 people. I will proceed with the booking.
+- Action: API call{'api_name':'train_book','input_parameters':{'train_schedule_id':1584,'people':4}}
+
+Observation: {'success': True, 'result': {'message': "Booking Success. Booked information: {'reservation_id': 0, 'reference_number': 'xJTYdtLe', 'train_schedule_id': 1584, 'people': 4}"}}
+
+- Thought: The train leaving at 10:40 from Cambridge to Stansted Airport on Saturday has been successfully booked for 4 people. I will inform the user about the successful booking and ask if they need any further assistance.
+- Action: Talk("The train departing at 10:40 from Cambridge to Stansted Airport on Saturday has been successfully booked for 4 people. Is there anything else I can assist you with?")
+
+Observation: {}
+
+User: Great! Could you provide me with the booking reference number for the train?
+
+- Thought: The booking reference number is included in the booking success message from the train_book API response. I will provide the user with the booking reference number.
+- Action: Talk("Your booking reference number for the train is xJTYdtLe. If you need any further assistance, feel free to ask.")
+
+Observation: {}
+
+User: Thanks! Now, I'm also looking for a guesthouse to stay in Cambridge. It should have free WiFi, be cheap, and I need it for 4 people starting Thursday for 2 nights. Could you help me find one?
+
+- Thought: The user wants to find a guesthouse in Cambridge with free WiFi, that is cheap, for 4 people, starting Thursday for 2 nights. I should check the accommodation app and its APIs to find guesthouses fitting these criteria.
+- Action: API call{'api_name':'show_api_description','input_parameters':{'app_name':'accommodation'}}
+
+Observation: {'success': True, 'result': [{'name': 'accommodation_retrieve', 'description': 'Retrieves an accommodation (hotel, guesthouse etc.) list from the database that matches the given input parameter conditions. Up to 7 results will be displayed, and the rest will be truncated and not shown.'}, {'name': 'accommodation_book', 'description': 'Book the specific accommodation (hotel, guesthouse etc.) with the given input parameter options.'}]}
+
+- Thought: The accommodation_retrieve API is suitable for finding accommodations. I need to check its details to understand the parameters for filtering guesthouses with free WiFi, cheap, for 4 people, starting Thursday for 2 nights in Cambridge.
+- Action: API call{'api_name':'show_api_docs','input_parameters':{'app_name':'accommodation','api_name':'accommodation_retrieve'}}
+
+Observation: {'success': True, 'result': {'app_name': 'accommodation', 'api_name': 'accommodation_retrieve', 'method': 'GET', 'description': 'Retrieves an accommodation (hotel, guesthouse etc.) list from the database that matches the given input parameter conditions. Up to 7 results will be displayed, and the rest will be truncated and not shown.', 'parameters': [{'name': 'area', 'type': 'string', 'required': False, 'description': 'Location of the accommodation.', 'default': None, 'constraints': ['north', 'west', 'south', 'east', 'centre']}, {'name': 'internet', 'type': 'bool', 'required': False, 'description': 'Whether the accommodation offers internet.', 'default': None, 'constraints': [True, False]}, {'name': 'name', 'type': 'string', 'required': False, 'description': 'Name of the accommodation. Must be entered in lowercase.', 'default': None, 'constraints': []}, {'name': 'parking', 'type': 'bool', 'required': False, 'description': 'Whether the accommodation offers parking service.', 'default': None, 'constraints': [True, False]}, {'name': 'pricerange', 'type': 'string', 'required': False, 'description': 'Indicates the approximate price range of the accommodation.', 'default': None, 'constraints': ['cheap', 'moderate', 'expensive']}, {'name': 'stars', 'type': 'int', 'required': False, 'description': "The accommodation's rating represented in stars.", 'default': None, 'constraints': [0, 1, 2, 3, 4, 5]}, {'name': 'type', 'type': 'string', 'required': False, 'description': 'Represents the category of the accommodation.', 'default': None, 'constraints': ['bed and breakfast', 'guesthouse', 'hotel']}], 'response_schemas': {'success': {'success': 'bool', 'result': [{'address': 'string', 'area': 'string', 'internet': 'string', 'parking': 'string', 'id': 'string', 'location': ['float', 'float'], 'name': 'string', 'phone': 'string', 'postcode': 'string', 'price': {'double': 'string', 'family': 'string', 'single': 'string'}, 'pricerange': 'string', 'stars': 'string', 'takesbookings': 'string', 'type': 'string'}]}, 'failure': {'success': 'bool', 'result': {'message': 'string'}}}}}
+
+- Thought: The accommodation_retrieve API allows filtering by area, internet availability, price range, type of accommodation, and other parameters. The user wants a guesthouse in Cambridge with free WiFi, cheap price range, for 4 people, starting Thursday for 2 nights. I'll retrieve guesthouses in Cambridge with internet=True and pricerange=cheap. I will confirm the area parameter as optional and can be left empty since the user specified Cambridge city generally.
+- Action: API call{'api_name':'accommodation_retrieve','input_parameters':{'internet':True,'pricerange':'cheap','type':'guesthouse'}}
+
+Observation: {'success': True, 'result': [{'address': '56 saint barnabas road', 'area': 'centre', 'internet': 'yes', 'parking': 'yes', 'id': '2', 'location': [52.1986444444444, 0.138133333333333], 'name': 'alexander bed and breakfast', 'phone': '01223525725', 'postcode': 'cb12de', 'price': {'double': '50', 'single': '40'}, 'pricerange': 'cheap', 'stars': '4', 'takesbookings': 'yes', 'type': 'guesthouse'}, {'address': '517a coldham lane', 'area': 'east', 'internet': 'yes', 'parking': 'yes', 'id': '3', 'location': [52.1963733, 0.1987426], 'name': 'allenbell', 'phone': '01223210353', 'postcode': 'cb13js', 'price': {'double': '60', 'family': '90', 'single': '35'}, 'pricerange': 'cheap', 'stars': '4', 'n': 'yes', 'type': 'guesthouse'}, {'address': '710 newmarket road', 'area': 'east', 'internet': 'yes', 'parking': 'yes', 'id': '8', 'location': [52.2176534, 0.1747439], 'name': 'autumn house', 'phone': '01223575122', 'postcode': 'cb58rs', 'price': {'double': '60', 'family': '90', 'single': '40'}, 'pricerange': 'cheap', 'stars': '4', 'takesbookings': 'yes', 'type': 'guesthouse'}, {'address': '328a histon road', 'area': 'north', 'internet': 'yes', 'parking': 'yes', 'id': '13', 'location': [52.227589, 0.112288], 'name': 'city centre north b and b', 'phone': '01223312843', 'postcode': 'cb43ht', 'price': {'single': '40'}, 'pricerange': 'cheap', 'stars': '0', 'takesbookings': 'yes', 'type': 'guesthouse'}, {'address': '41 warkworth street', 'area': 'centre', 'internet': 'yes', 'parking': 'yes', 'id': '15', 'location': [52.20439812598512, 0.13059139251708984], 'name': 'el shaddai', 'phone': '01223327978', 'postcode': 'cb11eg', 'price': {'double': '60', 'family': '62', 'single': '40'}, 'pricerange': 'cheap', 'stars': '0', 'takesbookings': 'yes', 'type': 'guesthouse'}, {'address': '144 thornton road', 'area': 'west', 'internet': 'yes', 'parking': 'yes', 'id': '17', 'location': [52.226235, 0.091796], 'name': 'finches bed and breakfast', 'phone': '01223276653', 'postcode': 'cb30nd', 'price': {'double': '50', 'single': '50'}, 'pricerange': 'cheap', 'stars': '4', 'takesbookings': 'yes', 'type': 'guesthouse'}, {'address': '732-734 newmarket road', 'area': 'east', 'internet': 'yes', 'parking': 'yes', 'id': '24', 'location': [52.2176534, 0.1747439], 'name': 'leverton house', 'phone': '01223292094', 'postcode': 'cb58rs', 'price': {'double': '60', 'family': '90', 'single': '40'}, 'pricerange': 'cheap', 'stars': '4', 'takesbookings': 'yes', 'type': 'guesthouse'}]}
+
+- Thought: I found several cheap guesthouses in Cambridge with free WiFi. I will list a few options with their names, locations, and prices for the user to choose from for 4 people starting Thursday for 2 nights.
+- Action: Talk("I found several cheap guesthouses in Cambridge with free WiFi. Here are some options: 1. Alexander Bed and Breakfast in the centre, price around 50 per night for double rooms. 2. Allenbell in the east area, price around 60 for double rooms. 3. Autumn House also in the east, price around 60 for double rooms. Would you like to book one of these, or do you want more options?")
+
+Observation: {}
+
+User: Please book the Alexander Bed and Breakfast for 4 people starting Thursday for 2 nights.
+
+- Thought: The user wants to book Alexander Bed and Breakfast for 4 people starting Thursday for 2 nights. I need to check the accommodation_book API to know the required parameters for booking.
+- Action: API call{'api_name':'show_api_docs','input_parameters':{'app_name':'accommodation','api_name':'accommodation_book'}}
+
+Observation: {'success': True, 'result': {'app_name': 'accommodation', 'api_name': 'accommodation_book', 'method': 'POST', 'description': 'Book the specific accommodation (hotel, guesthouse etc.) with the given input parameter options.', 'parameters': [{'name': 'id', 'type': 'int', 'required': True, 'description': 'Unique id of the specific accommodation.', 'default': None, 'constraints': []}, {'name': 'day', 'type': 'str', 'required': True, 'description': 'The day of the week for the check-in date.', 'default': None, 'constraints': ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']}, {'name': 'stay', 'type': 'int', 'required': True, 'description': 'The number of days to stay at the accommodation.', 'default': None, 'constraints': []}, {'name': 'people', 'type': 'int', 'required': True, 'description': 'The number of people to stay at the accommodation.', 'default': None, 'constraints': []}], 'response_schemas': {'success': {'success': 'bool', 'result': {'message': 'string'}}, 'failure': {'success': 'bool', 'result': {'message': 'string'}}}}}
+
+- Thought: The accommodation_book API requires the accommodation id, day of check-in, number of days to stay, and number of people. The user wants to book Alexander Bed and Breakfast with id 2 for 4 people starting Thursday for 2 nights. I will proceed with the booking.
+- Action: API call{'api_name':'accommodation_book','input_parameters':{'id':2,'day':'thursday','stay':2,'people':4}}
+
+Observation: {'success': False, 'result': {'message': 'Reservation not possible under given conditions (Fully occupied)'}}
+
+- Thought: The booking for Alexander Bed and Breakfast is not possible because it is fully occupied. I should inform the user about this and offer to check other available guesthouses from the previous list or search for more options.
+- Action: Talk("I'm sorry, but Alexander Bed and Breakfast is fully occupied for your requested dates. Would you like me to check other available guesthouses from the list I provided or search for more options?")
+
+Observation: {}
+
+User: Please try booking Allenbell guesthouse for the same dates and group size for 2 nights.
+
+- Thought: The user wants to book Allenbell guesthouse for 4 people starting Thursday for 2 nights. The id for Allenbell is 3. I will try to book this accommodation using the accommodation_book API.
+- Action: API call{'api_name':'accommodation_book','input_parameters':{'id':3,'day':'thursday','stay':2,'people':4}}
+
+Observation: {'success': False, 'result': {'message': 'Reservation not possible under given conditions (Fully occupied)'}}
+
+- Thought: The booking attempt for Allenbell guesthouse also failed due to full occupancy. I should inform the user and offer other available guesthouses from the previous list or suggest searching for more accommodations.
+- Action: Talk("Unfortunately, Allenbell guesthouse is also fully occupied for your requested dates. Would you like me to check other guesthouses from the list or search for more options?")
+
+Observation: {}
+
+User: Book Autumn House for 4 people starting Thursday for 2 nights, please.
+
+- Thought: The user wants to book Autumn House guesthouse for 4 people starting Thursday for 2 nights. The id for Autumn House is 8. I will proceed with the booking using the accommodation_book API.
+- Action: API call{'api_name':'accommodation_book','input_parameters':{'id':8,'day':'thursday','stay':2,'people':4}}
+
+Observation: {'success': False, 'result': {'message': 'Reservation not possible under given conditions (Fully occupied)'}}
+
+- Thought: The booking attempt for Autumn House also failed due to full occupancy. I should inform the user and suggest checking other guesthouses or searching for more accommodations.
+- Action: Talk("I'm sorry, but Autumn House is also fully occupied for your requested dates. Would you like me to check other guesthouses for availability or search for more accommodation options?")
+
+Observation: {}
+
+User: Could you please check if Autumn House is available for 1 night instead?
+
+- Thought: The user wants to check availability of Autumn House for 1 night starting Thursday for 4 people instead of 2 nights. I will try to book Autumn House for 1 night using the accommodation_book API to check availability.
+- Action: API call{'api_name':'accommodation_book','input_parameters':{'id':8,'day':'thursday','stay':1,'people':4}}
+
+Observation: {'success': True, 'result': {'message': "Booking Success. Booked information: {'reservation_id': 0, 'reference_number': 'LEAz9x2e', 'id': 8, 'name': 'autumn house', 'day': 'thursday', 'people': 4, 'stay': 1}"}}
+
+- Thought: The booking for Autumn House for 1 night starting Thursday for 4 people was successful. I will inform the user about the booking and provide the reference number.
+- Action: Talk("Autumn House has been successfully booked for 1 night starting Thursday for 4 people. Your booking reference number is LEAz9x2e. Is there anything else I can assist you with?")
+
+Observation: {}
+
+User: No, that's everything I need. Thanks for your help! <END>
+

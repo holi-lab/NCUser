@@ -1,0 +1,175 @@
+You are a competent Tool Agent. You can solve user requests by executing various APIs during multi-turn conversations with user. Through conversations across multiple turns, you can ask users for information, provide answers, and perform user requests by making appropriate API calls.
+
+Here are three key APIs that you need to know to get more information
+
+# To get a list of apps that are available to you.
+→ API call{'api_name':'show_app_description','input_parameters':{}}
+
+# To get the list of apis under any app listed above, e.g. train
+→ API call{'api_name':'show_api_description','input_parameters':{'app_name'='train'}}
+
+# To get the specification of a particular api, e.g. train_book
+→ API call{'api_name':'show_api_docs','input_parameters':{'app_name'='train', 'api_name'='train_book'}}
+
+Notes:
+- Input parameters must strictly follow the API documentation. Only the parameters defined there should be used.
+- If a parameter has a list of allowed values specified under "constraints", you must use only values from that list.
+
+Based on this, you have to types of action.
+
+1. API call: When all input parameters can be collected during the conversation, execute the API call
+When performing an "API call" action, both the name of the API to be called and the input parameter information used for the call must be included.
+Example 1:
+When calling the play_kpop_music API with 'id'=3 (int type) and 'duration'='4' (string type):
+→ API call{'api_name':'play_kpop_music','input_parameters':{'id':3,'duration':'4'}}
+Example 2:
+When calling the book_flight API with 'from'='2025-03-01' (string type) and 'to'='2025-03-05' (string type):
+→ API call{'api_name':'book_flight','input_parameters':{'from':'2025-03-01','to':'2025-03-05'}}
+
+Notes:
+- Input parameters must strictly follow the API documentation. Only the parameters defined there should be used.
+- If a parameter has a list of allowed values specified under "constraints", you must use only values from that list.
+
+4. Talk: An action that communicates with the user through dialogue:
+You can take utterance related action such as:
+- Asking users about API input parameters
+- Responding based on API execution results
+- Notifying users that the request has been completed
+- When the user says thank you, ask if they have any other requests just to make sure.
+- If there is truly no way to provide the information, persuade the user to understand and give up, or suggest an alternative approach.
+- Suggestion of alternative options with similar time slots when no exact match is available for the user's requested time.
+
+or use the most appropriate action for the situation to communicate with the user, even if it is not among the listed actions.
+
+When performing "Talk" action to ask something to user:
+→ Talk(<Your utterance>)
+------------------------------------------------------
+Based on the given instruction, you have to return the thought and action in given form:
+The return format varies depending on the case. Given any dialogue history:
+
+1. When action is "API call", the action form should be:
+- Thought: <Consider the dialogue context and API call results before selecting the next action>
+- Action: API call{'api_name':<api-name>,'input_parameters':{'param1':'value1','param2':'value2}}
+
+2. When action is "Talk":
+- Thought: <Consider the dialogue context and API call results before selecting the next action>
+- Action: Talk("A message to user")
+
+System Rules:
+1. Don't ask the ID from the user. You can get it from another API.
+2. If the user specifies a time with the condition "arrive by," the system must provide only entities whose arrival time is equal to or earlier than the specified time. It doesn't matter if there's a big difference; an earlier time is fine.
+3. If the user specifies a time with the condition "leave at," the system must provide only entities whose leaving time is equal to or later than the specified time. It doesn't matter if there's a big difference; an later time is fine.
+4. Only conditions 2 and 3 related to time need to be satisfied. It is acceptable even if the provided time is far from the time specified by the user.
+5. If you want to make new reservation on same domain, you have to cancel a previous reservation. Only one entity booking is available for each domain. Use the Retriever to find the API for canceling reservations and proceed with the cancellation.
+6. What the user wants is to book exactly one entity for each requested domain. Collect the information provided by the user appropriately so that, in the end, only one entity is booked per domain as requested by the user.
+7. If the conversation between you and the user exceeds 16 turns, it will be terminated. Therefore, within that limit, you must review the user and the dialogue history, accurately identify the request, and solve it.
+
+Now, based on the given dialogue history, generate the next thought and action in the provided format. Generate only the given format and don't generate any other words.
+
+# Dialogue history:
+
+
+User: Hi! I'm planning a trip in Cambridge and I'm looking for a restaurant in the city centre that serves English food and is in the cheap price range. Can you help me find one?
+
+- Thought: The user wants to find a restaurant in Cambridge city centre that serves English food and is cheap. I need to check which apps are available for finding restaurants.
+- Action: API call{'api_name':'show_app_description','input_parameters':{}}
+
+Observation: {'success': True, 'result': [{'name': 'train', 'description': 'An app capable of retrieving or booking train schedules.'}, {'name': 'accommodation', 'description': 'An app capable of retrieving or booking accommodation.'}, {'name': 'restaurant', 'description': 'An app capable of retrieving or restaurant.'}, {'name': 'taxi', 'description': 'An app capable of retrieving or booking taxi.'}, {'name': 'general', 'description': 'supporting APIs such as book canceling'}]}
+
+- Thought: The restaurant app is available. I need to find the appropriate API under the restaurant app to search for restaurants in the city centre that serve English food and are cheap.
+- Action: API call{'api_name':'show_api_description','input_parameters':{'app_name':'restaurant'}}
+
+Observation: {'success': True, 'result': [{'name': 'restaurant_retrieve', 'description': 'Retrieves an restaurant list from the database that matches the given input parameter conditions. Up to 7 results will be displayed, and the rest will be truncated and not shown.'}, {'name': 'restaurant_book', 'description': 'Book the specific restaurant with the given input parameter options.'}]}
+
+- Thought: To find restaurants that match the user's criteria, I should use the restaurant_retrieve API. I need to know the parameters it accepts, so I will check the API documentation.
+- Action: API call{'api_name':'show_api_docs','input_parameters':{'app_name':'restaurant','api_name':'restaurant_retrieve'}}
+
+Observation: {'success': True, 'result': {'app_name': 'restaurant', 'api_name': 'restaurant_retrieve', 'method': 'GET', 'description': 'Retrieves an restaurant list from the database that matches the given input parameter conditions. Up to 7 results will be displayed, and the rest will be truncated and not shown.', 'parameters': [{'name': 'area', 'type': 'string', 'required': False, 'description': 'Location of the restaurant.', 'default': None, 'constraints': ['north', 'west', 'south', 'east', 'centre']}, {'name': 'name', 'type': 'string', 'required': False, 'description': 'Name of the restaurant. Must be entered in lowercase.', 'default': None, 'constraints': []}, {'name': 'pricerange', 'type': 'string', 'required': False, 'description': 'Indicates the approximate price range of the restaurant.', 'default': None, 'constraints': ['cheap', 'moderate', 'expensive']}, {'name': 'food', 'type': 'string', 'required': False, 'description': 'Represents the food type of the restaurant. Must be entered in lowercase.', 'default': None, 'constraints': []}], 'response_schemas': {'success': {'success': 'bool', 'result': [{'address': 'string', 'area': 'string', 'food': 'string', 'id': 'string', 'introduction': 'string', 'location': ['float', 'float'], 'name': 'string', 'phone': 'string', 'postcode': 'string', 'pricerange': 'string', 'type': 'string'}]}, 'failure': {'success': 'bool', 'result': {'message': 'string'}}}}}
+
+- Thought: I have all the necessary parameters to search for a restaurant that meets the user's requirements: area as "centre", food as "english", and pricerange as "cheap." I will call the restaurant_retrieve API with these parameters.
+- Action: API call{'api_name':'restaurant_retrieve','input_parameters':{'area':'centre','food':'english','pricerange':'cheap'}}
+
+Observation: {'success': True, 'result': []}
+
+- Thought: There are no restaurants in the city centre serving English food in the cheap price range. I should inform the user about this and ask if they want to consider a different price range or cuisine.
+- Action: Talk("I'm sorry, but I couldn't find any restaurants in the city centre serving English food in the cheap price range. Would you like to try a different price range or maybe another type of cuisine?")
+
+Observation: {}
+
+User: Since there are no English food options in the cheap range, could you please check if there's a restaurant serving Indian food in the city centre that fits the cheap price range?
+
+- Thought: The user wants to find a restaurant serving Indian food in the city centre that is cheap. I will call the restaurant_retrieve API with area as "centre," food as "indian," and pricerange as "cheap."
+- Action: API call{'api_name':'restaurant_retrieve','input_parameters':{'area':'centre','food':'indian','pricerange':'cheap'}}
+
+Observation: {'success': True, 'result': [{'address': '74 Mill Road City Centre', 'area': 'centre', 'food': 'indian', 'id': '19180', 'introduction': 'kohinoor serves a variety of indian and vegetarian dishes at their restaurant a takeaway and delivery service is also available', 'location': [52.200422, 0.135784], 'name': 'kohinoor', 'phone': '01223323639', 'postcode': 'cb12as', 'pricerange': 'cheap', 'type': 'restaurant'}, {'address': '72 Regent Street City Centre', 'area': 'centre', 'food': 'indian', 'id': '19218', 'introduction': 'the gandhi serves a variety of indian and bangladeshi dishes at their restaurant to eat in or take away. Catering for private parties of up to 140 guests is available upon request', 'location': [52.200187, 0.126407], 'name': 'the gandhi', 'phone': '01223353942', 'postcode': 'cb21dp', 'pricerange': 'cheap', 'type': 'restaurant'}, {'address': '3 - 5 Millers Yard Mill Lane', 'area': 'centre', 'food': 'indian', 'id': '15275', 'introduction': '', 'location': [52.20143, 0.11664], 'name': 'mahal of cambridge', 'phone': '01223360409', 'postcode': 'cb21rq', 'pricerange': 'cheap', 'signature': 'chicken tikka masala', 'type': 'restaurant'}]}
+
+- Thought: I found three restaurants serving Indian food in the city centre that are cheap: Kohinoor, The Gandhi, and Mahal of Cambridge. I need to ask the user if they want to book one of these or need more information about any of them.
+- Action: Talk("I found three cheap Indian restaurants in the city centre: Kohinoor, The Gandhi, and Mahal of Cambridge. Would you like to book a table at any of these, or would you like more information about them?")
+
+Observation: {}
+
+User: I'd like to book a table for 8 people at 16:30 on Monday at Kohinoor, please.
+
+- Thought: The user wants to book a table for 8 people at 16:30 on Monday at the restaurant Kohinoor. I need to check the booking API for the restaurant app to understand the required parameters and constraints for booking.
+- Action: API call{'api_name':'show_api_docs','input_parameters':{'app_name':'restaurant','api_name':'restaurant_book'}}
+
+Observation: {'success': True, 'result': {'app_name': 'restaurant', 'api_name': 'restaurant_book', 'method': 'POST', 'description': 'Book the specific restaurant with the given input parameter options.', 'parameters': [{'name': 'id', 'type': 'int', 'required': True, 'description': 'Unique id of the specific restaurant.', 'default': None, 'constraints': []}, {'name': 'day', 'type': 'str', 'required': True, 'description': 'The day of the week to book the restaurant.', 'default': None, 'constraints': ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']}, {'name': 'people', 'type': 'int', 'required': True, 'description': 'The number of people to use the restaurant service.', 'default': None, 'constraints': []}, {'name': 'time', 'type': 'str', 'required': True, 'description': 'The desired time to visit the restaurant.', 'default': None, 'constraints': 'The time must be entered as a string in the hh:mm format, from 00:00 to 23:59.'}], 'response_schemas': {'success': {'success': 'bool', 'result': {'message': 'string'}}, 'failure': {'success': 'bool', 'result': {'message': 'string'}}}}}
+
+- Thought: I have all the necessary information to book the table at Kohinoor: restaurant id (19180), day (monday), time (16:30), and number of people (8). I will proceed with the booking.
+- Action: API call{'api_name':'restaurant_book','input_parameters':{'id':19180,'day':'monday','people':8,'time':'16:30'}}
+
+Observation: {'success': True, 'result': {'message': "Booking Success. Booked information: {'reservation_id': 0, 'reference_number': 'AAsUWvTR', 'id': 19180, 'name': 'kohinoor', 'day': 'monday', 'people': 8, 'time': '16:30'}"}}
+
+- Thought: The booking at Kohinoor for 8 people at 16:30 on Monday was successful. I should inform the user of the successful booking.
+- Action: Talk("Your table for 8 people at Kohinoor on Monday at 16:30 has been successfully booked. Is there anything else I can help you with?")
+
+Observation: {}
+
+User: Great! Could I please have the booking reference number for my reservation at Kohinoor?
+
+- Thought: The booking reference number was included in the booking confirmation message. I should provide the user with the reference number.
+- Action: Talk("Your booking reference number for Kohinoor is AAsUWvTR. If you need any further assistance, please let me know.")
+
+Observation: {}
+
+User: Thanks! Now, I'm looking for a train leaving from Cambridge to Ely on Thursday, departing after 13:15. Can you help me find one?
+
+- Thought: The user wants to find a train departing from Cambridge to Ely on Thursday, leaving after 13:15. I will check the available APIs under the train app to see how to search for trains matching these criteria.
+- Action: API call{'api_name':'show_api_description','input_parameters':{'app_name':'train'}}
+
+Observation: {'success': True, 'result': [{'name': 'train_retrieve', 'description': 'Retrieves an train schedule list from the database that matches the given input parameter conditions. Up to 7 results will be displayed, and the rest will be truncated and not shown.'}, {'name': 'train_book', 'description': 'Book the specific train schedule with the given input parameter options.'}]}
+
+- Thought: To find trains that match the user's criteria, I need to call the train_retrieve API. I should check the API documentation to understand the required parameters and constraints.
+- Action: API call{'api_name':'show_api_docs','input_parameters':{'app_name':'train','api_name':'train_retrieve'}}
+
+Observation: {'success': True, 'result': {'app_name': 'train', 'api_name': 'train_retrieve', 'method': 'GET', 'description': 'Retrieves an train schedule list from the database that matches the given input parameter conditions. Up to 7 results will be displayed, and the rest will be truncated and not shown.', 'parameters': [{'name': 'departure', 'type': 'string', 'required': False, 'description': "The train's departure location. Must be entered in lowercase.", 'default': None, 'constraints': []}, {'name': 'destination', 'type': 'string', 'required': False, 'description': "The train's destination location. Must be entered in lowercase.", 'default': None, 'constraints': []}, {'name': 'day', 'type': 'str', 'required': False, 'description': 'The day of the week the train departs', 'default': None, 'constraints': ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']}], 'response_schemas': {'success': {'success': 'bool', 'result': [{'train_schedule_id': 'string', 'arriveBy': 'string', 'day': 'string', 'departure': 'string', 'destination': 'string', 'duration': 'string', 'leaveAt': 'string', 'price': 'string', 'trainID': 'string'}]}, 'failure': {'success': 'bool', 'result': {'message': 'string'}}}}}
+
+- Thought: The train_retrieve API accepts parameters for departure location, destination, and day. There's no direct parameter for departure time filtering, but I can filter results after retrieval. I will call the train_retrieve API with departure="cambridge," destination="ely," and day="thursday" to get the schedule.
+- Action: API call{'api_name':'train_retrieve','input_parameters':{'departure':'cambridge','destination':'ely','day':'thursday'}}
+
+Observation: {'success': True, 'result': [{'train_schedule_id': '1374', 'arriveBy': '06:07', 'day': 'thursday', 'departure': 'cambridge', 'destination': 'ely', 'duration': '17 minutes', 'leaveAt': '05:50', 'price': '4.40 pounds', 'trainID': 'TR0996'}, {'train_schedule_id': '1375', 'arriveBy': '08:07', 'day': 'thursday', 'departure': 'cambridge', 'destination': 'ely', 'duration': '17 minutes', 'leaveAt': '07:50', 'price': '4.40 pounds', 'trainID': 'TR4553'}, {'train_schedule_id': '1376', 'arriveBy': '10:07', 'day': 'thursday', 'departure': 'cambridge', 'destination': 'ely', 'duration': '17 minutes', 'leaveAt': '09:50', 'price': '4.40 pounds', 'trainID': 'TR1923'}, {'train_schedule_id': '1377', 'arriveBy': '12:07', 'day': 'thursday', 'departure': 'cambridge', 'destination': 'ely', 'duration': '17 minutes', 'leaveAt': '11:50', 'price': '4.40 pounds', 'trainID': 'TR5216'}, {'train_schedule_id': '1378', 'arriveBy': '14:07', 'day': 'thursday', 'departure': 'cambridge', 'destination': 'ely', 'duration': '17 minutes', 'leaveAt': '13:50', 'price': '4.40 pounds', 'trainID': 'TR5225'}, {'train_schedule_id': '1379', 'arriveBy': '16:07', 'day': 'thursday', 'departure': 'cambridge', 'destination': 'ely', 'duration': '17 minutes', 'leaveAt': '15:50', 'price': '4.40 pounds', 'trainID': 'TR0013'}, {'train_schedule_id': '1380', 'arriveBy': '18:07', 'day': 'thursday', 'departure': 'cambridge', 'destination': 'ely', 'duration': '17 minutes', 'leaveAt': '17:50', 'price': '4.40 pounds', 'trainID': 'TR7355'}]}
+
+- Thought: The user wants a train leaving after 13:15. From the retrieved list, the trains leaving after 13:15 are the ones leaving at 13:50, 15:50, and 17:50. I will present these options to the user.
+- Action: Talk("I found trains from Cambridge to Ely on Thursday that depart after 13:15. The available options leave at 13:50, 15:50, and 17:50. Would you like to book any of these trains?")
+
+Observation: {}
+
+User: Please book a train ticket for 8 people on the 13:50 train from Cambridge to Ely on Thursday.
+
+- Thought: The user wants to book a ticket for 8 people on the train leaving at 13:50 from Cambridge to Ely on Thursday. I need to check the train booking API to know the required parameters for booking.
+- Action: API call{'api_name':'show_api_docs','input_parameters':{'app_name':'train','api_name':'train_book'}}
+
+Observation: {'success': True, 'result': {'app_name': 'train', 'api_name': 'train_book', 'method': 'POST', 'description': 'Book the specific train schedule with the given input parameter options.', 'parameters': [{'name': 'train_schedule_id', 'type': 'int', 'required': True, 'description': 'Unique id of the specific restaurant.', 'default': None, 'constraints': []}, {'name': 'people', 'type': 'int', 'required': True, 'description': 'The number of people to use the restaurant service.', 'default': None, 'constraints': []}], 'response_schemas': {'success': {'success': 'bool', 'result': {'message': 'string'}}, 'failure': {'success': 'bool', 'result': {'message': 'string'}}}}}
+
+- Thought: I have the necessary parameters to book the train: train_schedule_id for the 13:50 train which is 1378 and the number of people as 8. I will proceed with the booking.
+- Action: API call{'api_name':'train_book','input_parameters':{'train_schedule_id':1378,'people':8}}
+
+Observation: {'success': True, 'result': {'message': "Booking Success. Booked information: {'reservation_id': 0, 'reference_number': 'YJFENRst', 'train_schedule_id': 1378, 'people': 8}"}}
+
+- Thought: The train booking for 8 people on the 13:50 train from Cambridge to Ely on Thursday was successful. I should inform the user about the successful booking and provide the reference number.
+- Action: Talk("Your train ticket for 8 people on the 13:50 train from Cambridge to Ely on Thursday has been successfully booked. Your booking reference number is YJFENRst. Is there anything else I can assist you with?")
+
+Observation: {}
+
+User: That's all for now, thank you! <END>
+
