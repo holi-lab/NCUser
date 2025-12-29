@@ -175,10 +175,10 @@ def collate_batch(features: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Te
 
 def main():
     parser = argparse.ArgumentParser()
-    
-    parser.add_argument("--data_root", type=str, default="train_datasets/multiwoz_train_dataset_4010101030")
+        
+    parser.add_argument("--data_root", type=str, default="train_datasets/multiwoz_train_dataset")
     parser.add_argument("--model_name", type=str, default="meta-llama/Llama-3.2-3B-Instruct")
-    parser.add_argument("--output_dir", type=str, default="./llama-3b-fullepoch_4010101030")
+    parser.add_argument("--output_dir", type=str, default="./llama-3.2-3b-multiwoz-finetuned")
     
     parser.add_argument("--max_length", type=int, default=4096)
     parser.add_argument("--num_train_epochs", type=float, default=1)
