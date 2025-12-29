@@ -284,7 +284,10 @@ non_coll_unavailable_service.yaml
 python additional_analysis.py
 ```
 
-우리는 논문 experiment results 기재에 사용한 모든 inference results 들은 `experiment_result_past` 폴더에 있다. 추가적인 analysis를 진행하고자 하는 분들은 `experiment_result_past` 폴더 내의 file, 그리고 `additional_analysis.py`와 `run_error_analysis.sh` 의 analysis code를 활용하면 된다.
+우리는 논문 experiment results 기재에 사용한 모든 inference results 들은 아래 Google Drive의 zip 파일에 저장되어 있다.
+For MultiWOZ, `experiment_result_multiwoz.zip` 파일의 압축을 풀어서 나온 `experiment_result` 폴더로 기존 repo 내의 `experiment_result` 폴더를 대체하면 된다.
+
+https://drive.google.com/drive/u/0/folders/1_UQZlT3fjg38gLqhzxQCMY-AQdWDQtC9
 
 ### Train
 
@@ -460,7 +463,10 @@ non_coll_unavailable_service.yaml
 python additional_analysis.py
 ```
 
-우리는 논문 experiment results 기재에 사용한 모든 inference results 들은 `experiment_result_past` 폴더에 있다. 추가적인 analysis를 진행하고자 하는 분들은 `experiment_result_past` 폴더 내의 file, 그리고 `additional_analysis.py`와 `run_error_analysis.sh` 의 analysis code를 활용하면 된다.
+우리는 논문 experiment results 기재에 사용한 모든 inference results 들은 아래 Google Drive의 zip 파일에 저장되어 있다.
+For Tau-Bench, `experiment_result_tau.zip` 파일의 압축을 풀어서 나온 `experiment_result` 폴더로 기존 repo 내의 `experiment_result` 폴더를 대체하면 된다.
+
+https://drive.google.com/drive/u/0/folders/1_UQZlT3fjg38gLqhzxQCMY-AQdWDQtC9
 
 
 ## Extension (ColBench, MINT)
