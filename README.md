@@ -427,9 +427,32 @@ non_coll_unavailable_service.yaml # Unavailable service requests
 
 **⚠️ Warning:** All models and behaviors run in parallel. We recommend limiting execution to **2 models and 2 behaviors simultaneously** to avoid API rate limits and resource constraints.
 
+#### 3. API Configuration
+
+##### API Keys
+
+In `custom_openai_client.py`:
+
+```python
+from openai import OpenAI
+
+openai_client = OpenAI(
+    api_key="<Your OpenAI API key>"
+)
+
+open_router_client = OpenAI(
+    api_key="<Your OpenRouter API key>",
+    base_url="https://openrouter.ai/api/v1"
+)
+```
+
+Fill in the OpenAI API key in `<Your OpenAI API key>`. Since our user simulator uses GPT-4.1-mini, this field must always be completed.
+
+Additionally, if you are using the tool agent model from OpenRouter, please fill in `<Your OpenRouter API key>` as well.
+
 ### Running Experiments
 
-After completing configuration steps (1-2):
+After completing configuration steps (1-3):
 
 ```bash
 ./run_dialogue_simulation.sh
