@@ -94,7 +94,9 @@ open_router_client = OpenAI(
 )
 ```
 
-Only fill in the keys for the APIs you're using.
+Fill in the OpenAI API key in `<Your OpenAI API key>`. Since our user simulator uses GPT-4.1-mini, this field must always be completed.
+
+Additionally, if you are using the tool agent model from OpenRouter, please fill in `<Your OpenRouter API key>` as well.
 
 ##### vLLM Server (Optional for Local Inference)
 

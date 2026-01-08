@@ -9,7 +9,7 @@ from openai import OpenAI
 from transformers import AutoTokenizer
 warnings.filterwarnings('ignore')
 from copy import deepcopy
-from past.save_to_html import *
+# from past.save_to_html import *
 from get_experiment_path import get_experiment_path
 from goal_align_new import slot_alignment_evaluation
 from multiwoz_user import MultiwozUser

@@ -5,9 +5,11 @@ mkdir -p result_of_error_analysis
 
 # Model names
 models=("gpt-4.1-mini" "gpt-4.1-nano" "qwen3-235b-a22b" "qwen3-30b-a3b" "llama-3.1-70b-instruct")
+models=("EXAONE-4.0-32B")
 
 # YAML files
 yaml_files=("non_coll_emotional_acts.yaml" "non_coll_fragment_dumping.yaml" "non_coll_normal.yaml" "non_coll_tangential.yaml" "non_coll_unavailable_service.yaml")
+yaml_files=("non_coll_normal.yaml")
 
 # Iterate through each model and yaml file combination
 for model in "${models[@]}"; do

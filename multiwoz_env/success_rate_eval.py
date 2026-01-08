@@ -10,6 +10,8 @@ from get_experiment_path import get_experiment_path
 def print_price():
     total_price = 0
     for file in os.listdir("price_file"):
+        if "txt" in file:
+            continue
         with open(f"price_file/{file}",'r') as f:
             current_file = json.load(f)
         total_price+=current_file['cost']

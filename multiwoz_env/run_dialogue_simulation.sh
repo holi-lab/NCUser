@@ -2,9 +2,9 @@
 
 N=4 # Number of Simulation (In our paper, we use N=4)
 M=40 # FIX Value. Do not modify
-O=1 # if O == 0, use all 89 test scenarios. elif 1 or 2, use the subset from 89 test scenarios
+O=0  # if O == 0, use all 89 test scenarios. elif 1 or 2, use the subset from 89 test scenarios
 
-is_vllm=0 # if 0, no vllm. Else, use vllm.
+is_vllm=1 # if 0, no vllm. Else, use vllm.
 
 is_train_mode=0 # if 0, use testset. Else, use trainset.
 
@@ -16,7 +16,7 @@ get_experiment_path() {
 
 models=(
     # "gpt-4.1-mini"
-    "gpt-4.1-nano"
+    # "gpt-4.1-nano"
     # "qwen/qwen3-235b-a22b"
     # "qwen/qwen3-30b-a3b"
     # "meta-llama/llama-3.1-70b-instruct"
@@ -27,6 +27,8 @@ models=(
 
     # "holi-lab/qwen-2.5-3b-528_195"
     # "holi-lab/qwen-2.5-3b-4010101030"
+
+    "LGAI-EXAONE/EXAONE-4.0-32B"
 )
 
 # YAML files array
