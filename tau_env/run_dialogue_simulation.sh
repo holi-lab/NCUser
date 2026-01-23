@@ -42,7 +42,7 @@ for model_name in "${models[@]}"; do
                 echo "Starting session ${trial_session_name} for trial ${trial}"
 
                 tmux new-session -d -s "${trial_session_name}" \
-                    "export MODEL_NAME='${model_name}'; python run.py --num-trials ${trial} --agent-strategy react --env ${domain} --model ${model_name} --model-provider openai --user-model gpt-4.1-mini --user-model-provider openai --user-strategy llm --max-concurrency 60 --non-coll-yaml ${yaml_file}"
+                    "export MODEL_NAME='${model_name}'; python run.py --num-trials ${trial} --agent-strategy react --env ${domain} --model ${model_name} --model-provider openai --user-model gpt-4.1-mini --user-model-provider openai --user-strategy llm --max-concurrency 20 --non-coll-yaml ${yaml_file}"
             done
         done
     done
@@ -291,7 +291,7 @@ while [ $main_round -le $max_attempts ]; do
 
     # 최대 5번 반복하여 누락된 시뮬레이션 검사 및 실행
     for round in {1..5}; do
-        echo "=== Missing simulation detection round $round/10 ==="
+        echo "=== Missing simulation detection round $round/5 ==="
         
         # 모든 모델의 누락된 시뮬레이션 개수 계산
         total_missing=0

@@ -3,6 +3,7 @@
 import os
 import sys
 import json
+import shutil
 
 def find_missing_simulations(result_path,n_trial):
     with open("testset_retail_idx.json",'r') as f:
@@ -28,12 +29,22 @@ def find_missing_simulations(result_path,n_trial):
             current_idx = f"retail_{retail_idx}_{trial}"
             if current_idx not in simulation_list:
                 missing_list.append(current_idx)
+            else:
+                current_path = os.path.join(result_path,current_idx)
+                if "goal_align_result.json" not in os.listdir(current_path):
+                    shutil.rmtree(current_path)
+                    missing_list.append(current_idx)
         
         # Airline 체크  
         for airline_idx in airline_idx_list:
             current_idx = f"airline_{airline_idx}_{trial}"
             if current_idx not in simulation_list:
                 missing_list.append(current_idx)
+            else:
+                current_path = os.path.join(result_path,current_idx)
+                if "goal_align_result.json" not in os.listdir(current_path):
+                    shutil.rmtree(current_path)
+                    missing_list.append(current_idx)
     
     return sorted(missing_list)
 

@@ -4,34 +4,6 @@ import subprocess
 from analysis_error import error_analysis
 from analysis_mistake import mistake_analysis
 
-def evaluate_from_simulation_result_per_domain(model_name,behavior,simulation_result_dir):
-    
-    for domain in ["airline","retail"]:
-        result_list = []
-        for folder_name in os.listdir(simulation_result_dir):
-            if domain not in folder_name:
-                continue
-            folder_path = os.path.join(simulation_result_dir, folder_name)
-            eval_result_path = os.path.join(folder_path, "eval_result.json")
-            with open(eval_result_path, 'r', encoding='utf-8') as f:
-                eval_result = json.load(f)
-                result_list.append(eval_result)
-
-        trial_dict = {}
-        for result in result_list:
-            trial_num = result['trial']
-            if trial_num not in trial_dict:
-                trial_dict[trial_num] = []
-            trial_dict[trial_num].append(result['reward'])
-        
-        # 각 trial별 success rate 계산 (0~100%)
-        score_list = []
-        for trial in sorted(trial_dict.keys()):  # trial 순서대로 정렬
-            success_rate = mean(trial_dict[trial]) * 100
-            score_list.append(success_rate)
-
-        print(f"{domain} score: {mean(score_list)} {score_list}")
-
 def evaluate_from_simulation_result(simulation_result_dir):
     if not os.path.exists(simulation_result_dir):
         print(f"Error: {simulation_result_dir} directory does not exist")
@@ -41,7 +13,6 @@ def evaluate_from_simulation_result(simulation_result_dir):
 
     result_list = []
     for folder_name in sorted(os.listdir(simulation_result_dir)):
-
         folder_path = os.path.join(simulation_result_dir, folder_name)
         # print(folder_name)
         if os.path.isdir(folder_path):
