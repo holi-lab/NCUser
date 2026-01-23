@@ -2,7 +2,7 @@
 
 domain_list=("airline" "retail")
 # trial_list=(0 1 2 3)
-n_trial=1
+n_trial=3
 models=(
     # "gpt-4.1-mini"
     "gpt-4.1-nano"
@@ -92,7 +92,7 @@ run_missing_simulations() {
     echo "Checking for missing simulations for model: $model_name"
     
     # 누락된 시뮬레이션을 배열로 가져오기
-    mapfile -t missing_array < <(python3 find_missing.py "$result_path")
+    mapfile -t missing_array < <(python3 find_missing.py "$result_path" "$n_trial")
     
     if [ ${#missing_array[@]} -eq 0 ]; then
         echo "No missing simulations found for $model_name"
@@ -291,14 +291,14 @@ while [ $main_round -le $max_attempts ]; do
 
     # 최대 5번 반복하여 누락된 시뮬레이션 검사 및 실행
     for round in {1..5}; do
-        echo "=== Missing simulation detection round $round/5 ==="
+        echo "=== Missing simulation detection round $round/10 ==="
         
         # 모든 모델의 누락된 시뮬레이션 개수 계산
         total_missing=0
         for model_name in "${models[@]}"; do
             for yaml_file in "${non_coll_yamls[@]}"; do
                 result_path=$(get_result_path "${model_name}" "${yaml_file}")
-                mapfile -t missing_array < <(python3 find_missing.py "$result_path")
+                mapfile -t missing_array < <(python3 find_missing.py "$result_path" "$n_trial")
                 total_missing=$((total_missing + ${#missing_array[@]}))
             done
         done

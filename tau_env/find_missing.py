@@ -4,7 +4,7 @@ import os
 import sys
 import json
 
-def find_missing_simulations(result_path):
+def find_missing_simulations(result_path,n_trial):
     with open("testset_retail_idx.json",'r') as f:
         retail_idx_list = json.load(f)
     # retail_idx_list = [10,12,26,50]
@@ -12,7 +12,7 @@ def find_missing_simulations(result_path):
     with open("testset_airline_idx.json",'r') as f:
         airline_idx_list = json.load(f)
     # airline_idx_list = [13,35,36,38]
-    trial_list = [0, 1, 2, 3]
+    trial_list = [i for i in range(n_trial)]
     
     if not os.path.exists(result_path):
         print(f"Error: Path {result_path} does not exist", file=sys.stderr)
@@ -49,12 +49,13 @@ def parse_missing_item(missing_item):
     return domain, idx, trial
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python3 find_missing.py <result_path>", file=sys.stderr)
+    if len(sys.argv) < 3:
+        print("Usage: python3 find_missing.py <result_path> and <n_trial>", file=sys.stderr)
         sys.exit(1)
     
     result_path = sys.argv[1]
-    missing = find_missing_simulations(result_path)
+    n_trial = int(sys.argv[2])
+    missing = find_missing_simulations(result_path,n_trial)
     
     if missing:
         # 각 missing item을 한 줄씩 출력 (shell에서 파싱하기 쉽게)

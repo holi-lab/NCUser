@@ -380,7 +380,7 @@ CUDA_VISIBLE_DEVICES={gpu_numbers} accelerate launch --num_processes 2 --main_pr
 cd tau_env
 conda create -n tau_env python=3.11
 conda activate tau_env
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ### Configuration

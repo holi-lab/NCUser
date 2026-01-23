@@ -877,7 +877,6 @@ class LLMUserSimulationEnv(BaseUserSimulationEnv):
         current_used_dialogue_state_list=[]
 
         if self.remaining_dialogue_state_list and self.non_coll_config['is_pbus'] == False and self.goal_list:
-            print("In the dialogue state tracker")
             current_used_dialogue_state_list = dialogue_state_tracker(
                 dial_hist, content, self.remaining_dialogue_state_list
             )

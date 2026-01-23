@@ -1,8 +1,6 @@
 import os
 import json
 from statistics import mean
-import matplotlib.pyplot as plt
-import numpy as np
 
 default_path_list =[
     "experiment_result/ours/gpt-4.1-mini/tangential",
