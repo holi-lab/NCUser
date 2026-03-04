@@ -521,14 +521,11 @@ All inference results used in our paper are available on Google Drive:
 ## Citation
 
 ```
-@misc{shim2025noncollaborativeusersimulatorstool,
-      title={Non-Collaborative User Simulators for Tool Agents}, 
-      author={Jeonghoon Shim and Woojung Song and Cheyon Jin and Seungwon KooK and Yohan Jo},
-      year={2025},
-      eprint={2509.23124},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2509.23124}, 
+@article{shim2025non,
+  title={Non-Collaborative User Simulators for Tool Agents},
+  author={Shim, Jeonghoon and Song, Woojung and Jin, Cheyon and KooK, Seungwon and Jo, Yohan},
+  journal={arXiv preprint arXiv:2509.23124},
+  year={2025}
 }
 ```
 
