@@ -27,7 +27,7 @@ model_name = sys.argv[1]
 yaml_file = sys.argv[2] if len(sys.argv) > 2 else "non_coll.yaml"
 foldername = get_experiment_path(model_name, yaml_file)
 
-print_price()
+# print_price()
 print(f"Result of {foldername}")
 
 # print(len(os.listdir(foldername)))
