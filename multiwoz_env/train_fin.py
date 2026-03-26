@@ -39,6 +39,26 @@ accelerator = Accelerator()
 # Data loader
 # --------
 
+# def load_all_conversations(data_root: str) -> List[List[Dict[str, str]]]:
+#     """
+#     Load all dial_hist_system_list.json files under 'data_root'
+#     """
+#     pattern = str(Path(data_root).expanduser() / "**" / "dial_hist_system_list.json")
+#     files = glob(pattern, recursive=True)
+#     convos: List[List[Dict[str, str]]] = []
+
+#     for f in files:
+#         try:
+#             with open(f, "r", encoding="utf-8") as fp:
+#                 conv = json.load(fp)
+#             # check whether conv is list of turns
+#             if isinstance(conv, list) and all(isinstance(m, dict) and "role" in m and "content" in m for m in conv):
+#                 convos.append(conv)
+#         except Exception as e:
+#             print(f"[WARN] Failed to load {f}: {e}")
+#     print(f"[INFO] Loaded {len(convos)} conversations from {len(files)} files.")
+#     return convos
+
 def load_all_conversations(data_root: str) -> List[List[Dict[str, str]]]:
     """
     Load all dial_hist_system_list.json files under 'data_root'
@@ -49,6 +69,12 @@ def load_all_conversations(data_root: str) -> List[List[Dict[str, str]]]:
 
     for f in files:
         try:
+            pass_or_fail_path = Path(f).parent / "pass_or_fail.txt"
+            with open(pass_or_fail_path, "r", encoding="utf-8") as pf:
+                result = pf.read().strip()
+            if result != "PASS":
+                continue
+
             with open(f, "r", encoding="utf-8") as fp:
                 conv = json.load(fp)
             # check whether conv is list of turns
@@ -58,7 +84,6 @@ def load_all_conversations(data_root: str) -> List[List[Dict[str, str]]]:
             print(f"[WARN] Failed to load {f}: {e}")
     print(f"[INFO] Loaded {len(convos)} conversations from {len(files)} files.")
     return convos
-
 
 def split_into_sft_examples(conv: List[Dict[str, str]]) -> List[List[Dict[str, str]]]:
     """
