@@ -324,7 +324,7 @@ is_train_mode=1  # 0: use testset; 1: use trainset
 
 **Step 4:** Organize training data:
 After simulation completes, dialogue data will be generated in `experiment_result/`. Create a new folder in `train_datasets/` and collect the simulation result folders you want to use as training data.
-- In our work, we rejection sampled only successful dialogues for training so make sure to filter all failed dialogues if you want to reproduce our results.
+- Our training code `train_fin.py` automatically rejection sample only the successful dialogues following our paper.
 
 The folder structure should be:
 ```
