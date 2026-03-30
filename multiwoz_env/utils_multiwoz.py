@@ -117,13 +117,12 @@ def observation_generator(reasoning,
             json.dump(api_call_log,f,indent=4)
 
         try:
-            payload = eval(parsed_payload)  # 위험한 부분이므로 나중에 ast.literal_eval로 바꾸는 게 더 안전함        
+            payload = eval(parsed_payload)       
         except: ## SyntaxError, NameError,TypeError
             process_reward_list.append(0) # format error
             error_message = str({"success":False,"result":{"message":f"'{parsed_payload}' is not a valid to parse the API call payload. Make sure to follow the 'API call' instruction properly."}})
             return {"observation":f"# Observation: {error_message} ","is_done":False}
         
-        ## 여기도 try except 걸어줘야 함. Payload에 api_name, input_parameters 있는지에 따라
         if "api_name" not in payload or "input_parameters" not in payload:
             process_reward_list.append(0)
             error_message = str({"success":False,"result":{"message":f"Payload format is invalid. Please contain 'api_name' and 'input_parameters'"}})
