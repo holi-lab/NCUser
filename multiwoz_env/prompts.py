@@ -39,7 +39,7 @@ Notes:
 - Input parameters must strictly follow the API documentation. Only the parameters defined there should be used.
 - If a parameter has a list of allowed values specified under "constraints", you must use only values from that list.
 
-4. Talk: An action that communicates with the user through dialogue:
+2. Talk: An action that communicates with the user through dialogue:
 You can take utterance related action such as:
 - Asking users about API input parameters
 - Responding based on API execution results
