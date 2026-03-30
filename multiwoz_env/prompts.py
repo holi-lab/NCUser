@@ -24,7 +24,7 @@ Notes:
 - Input parameters must strictly follow the API documentation. Only the parameters defined there should be used.
 - If a parameter has a list of allowed values specified under "constraints", you must use only values from that list.
 
-Based on this, you have to types of action.
+Based on this, you have two types of action.
 
 1. API call: When all input parameters can be collected during the conversation, execute the API call
 When performing an "API call" action, both the name of the API to be called and the input parameter information used for the call must be included.
