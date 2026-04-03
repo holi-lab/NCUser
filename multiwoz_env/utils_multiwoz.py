@@ -432,7 +432,7 @@ def simulation_multiwoz(client,
                 is_done,observation_message = current_observation['is_done'],current_observation['observation']
 
                 dial_hist_system_list.append(
-                    {"role":"system","content":observation_message}
+                    {"role":"user","content":observation_message}
                 )
 
                 if tokenizer:
