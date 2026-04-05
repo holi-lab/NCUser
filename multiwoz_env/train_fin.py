@@ -295,7 +295,7 @@ def main():
         dataloader_num_workers=4,
         optim="paged_adamw_32bit" if args.use_4bit else "adamw_torch",
         lr_scheduler_type="cosine",
-        # report_to="none",
+        report_to="none",
         prediction_loss_only=True,
         ddp_find_unused_parameters=False,  
         seed=args.seed,
