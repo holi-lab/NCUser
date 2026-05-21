@@ -924,8 +924,8 @@ class MultiwozUser:
         total_cost = input_cost + output_cost
 
         file_name = generate_random_string()
-        with open(f"price_file/{file_name}.json",'w') as f:
-            json.dump({"cost":total_cost},f,indent=4)
+        # with open(f"price_file/{file_name}.json",'w') as f:
+        #     json.dump({"cost":total_cost},f,indent=4)
 
         return generated_text
     
@@ -976,8 +976,8 @@ class MultiwozUser:
         total_cost = input_cost + output_cost
 
         file_name = generate_random_string()
-        with open(f"price_file/{file_name}.json",'w') as f:
-            json.dump({"cost":total_cost},f,indent=4)
+        # with open(f"price_file/{file_name}.json",'w') as f:
+        #     json.dump({"cost":total_cost},f,indent=4)
 
         return json.loads(arguments)
     
