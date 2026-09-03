@@ -1,4 +1,33 @@
-# Non-Collaborative User Simulators for Tool Agents
+<p align="center">
+  <h1 align="center">Non-Collaborative User Simulators for Tool Agents</h1>
+  <p align="center">
+    ICLR 2026
+  </p>
+  <p align="center">
+    <a href="https://jeonghoon-shim.github.io/">Jeonghoon Shim</a>,
+    <a href="https://opusdeisong.github.io/">Woojung Song</a>,
+    <a href="https://hzlcodus.github.io/website/">Cheyon Jin</a>,
+    Seungwon Kook,
+    <a href="https://yohanjo.github.io/">Yohan Jo</a>
+  </p>
+  <p align="center">
+    <a href="https://holi-lab.github.io/NCUser/">
+      <img src="https://img.shields.io/badge/Project-Page-0f766e" alt="Project Page">
+    </a>
+    <a href="https://arxiv.org/pdf/2509.23124">
+      <img src="https://img.shields.io/badge/Paper-PDF-red?style=flat&logo=arXiv&logoColor=red" alt="Paper PDF">
+    </a>
+    <a href="https://openreview.net/forum?id=UAUimofy3W">
+      <img src="https://img.shields.io/badge/OpenReview-ICLR_2026-1d4ed8" alt="OpenReview">
+    </a>
+    <a href="https://huggingface.co/holi-lab">
+      <img src="https://img.shields.io/badge/%F0%9F%A4%97-Models-ffcc4d" alt="Hugging Face models">
+    </a>
+  </p>
+  <p align="center">
+    🌐 <b>Project page:</b> <a href="https://holi-lab.github.io/NCUser/">holi-lab.github.io/NCUser</a>
+  </p>
+</p>
 
 ## TL;DR
 
@@ -521,12 +550,13 @@ All inference results used in our paper are available on Google Drive:
 
 ## Citation
 
-```
-@article{shim2025non,
-  title={Non-Collaborative User Simulators for Tool Agents},
-  author={Shim, Jeonghoon and Song, Woojung and Jin, Cheyon and KooK, Seungwon and Jo, Yohan},
-  journal={arXiv preprint arXiv:2509.23124},
-  year={2025}
+```bibtex
+@inproceedings{shim2026noncollaborative,
+    title     = {Non-Collaborative User Simulators for Tool Agents},
+    author    = {Shim, Jeonghoon and Song, Woojung and Jin, Cheyon and Kook, Seungwon and Jo, Yohan},
+    booktitle = {The Fourteenth International Conference on Learning Representations},
+    year      = {2026},
+    url       = {https://openreview.net/forum?id=UAUimofy3W}
 }
 ```
 

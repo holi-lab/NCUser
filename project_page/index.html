@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Non-Collaborative User Simulators for Tool Agents</title>
+
+  <meta name="description" content="ICLR 2026. A user simulator that asks for unavailable services, drifts off topic, loses patience, and types half-sentences, while still delivering every piece of goal information. State-of-the-art tool agents degrade under every behavior on MultiWOZ and τ-bench.">
+  <meta name="keywords" content="user simulation, tool agents, non-collaborative users, task-oriented dialogue, MultiWOZ, tau-bench, LLM agents, robustness, ICLR 2026">
+  <meta name="author" content="Jeonghoon Shim, Woojung Song, Cheyon Jin, Seungwon Kook, Yohan Jo">
+
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Holi Lab, Seoul National University">
+  <meta property="og:title" content="Non-Collaborative User Simulators for Tool Agents">
+  <meta property="og:description" content="A goal-aligned user simulator for four non-collaborative behaviors. Tool agents degrade under all of them, and collaborative-only fine-tuning does not fix it. ICLR 2026.">
+  <meta property="og:url" content="https://holi-lab.github.io/NCUser/">
+  <meta property="og:image" content="static/images/fig_overall.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Non-Collaborative User Simulators for Tool Agents">
+  <meta name="twitter:description" content="A goal-aligned user simulator for four non-collaborative behaviors. Tool agents degrade under all of them, and collaborative-only fine-tuning does not fix it. ICLR 2026.">
+  <meta name="twitter:image" content="static/images/fig_overall.png">
+
+  <meta name="citation_title" content="Non-Collaborative User Simulators for Tool Agents">
+  <meta name="citation_author" content="Shim, Jeonghoon">
+  <meta name="citation_author" content="Song, Woojung">
+  <meta name="citation_author" content="Jin, Cheyon">
+  <meta name="citation_author" content="Kook, Seungwon">
+  <meta name="citation_author" content="Jo, Yohan">
+  <meta name="citation_publication_date" content="2026">
+  <meta name="citation_conference_title" content="The Fourteenth International Conference on Learning Representations (ICLR 2026)">
+  <meta name="citation_arxiv_id" content="2509.23124">
+  <meta name="citation_pdf_url" content="https://arxiv.org/pdf/2509.23124">
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23171B26'/%3E%3Cpath d='M6 8h12a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-6l-5 4v-4H6a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3z' fill='%238FA8EC'/%3E%3Ccircle cx='25' cy='9' r='5.5' fill='%23EE8A76'/%3E%3Cpath d='M25 5.8v3.8' stroke='%23171B26' stroke-width='1.8' stroke-linecap='round'/%3E%3Ccircle cx='25' cy='12.1' r='1' fill='%23171B26'/%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
+
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #FFFFFF;
+      --surface: #FFFFFF;
+      --surface-2: #F5F5F7;
+      --ink: #1E1E22;
+      --ink-2: #444450;
+      --muted: #6B6F7E;
+      --rule: #DCDDE3;
+      --rule-soft: #ECEDF1;
+      /* behaviors */
+      --k: #9A9EAB;  --k-ink: #55596A;  --k-soft: #EEEFF3;   /* collaborative */
+      --u: #B9651F;  --u-ink: #8F4C12;  --u-soft: #F8EADB;   /* unavailable service */
+      --t: #23784C;  --t-ink: #1B5E3B;  --t-soft: #E1F2E8;   /* tangential */
+      --i: #C23B2C;  --i-ink: #9C2E22;  --i-soft: #F8E5E1;   /* impatience */
+      --n: #5B4BB5;  --n-ink: #45389A;  --n-soft: #E9E6F7;   /* incomplete utterance */
+      --line-strong: #1E1E22;
+      --line-weak: #A0A3B1;
+      --link: #3273DC;
+      --sans: "Google Sans", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --bg: #14151A; --surface: #1B1C23; --surface-2: #23242D;
+        --ink: #ECEDF2; --ink-2: #C4C6D1; --muted: #8E92A3;
+        --rule: #30323D; --rule-soft: #262832;
+        --k: #7F8496; --k-ink: #B3B7C4; --k-soft: #262833;
+        --u: #F0A868; --u-ink: #F5BE8C; --u-soft: #3E2A17;
+        --t: #6FC494; --t-ink: #9ADBB5; --t-soft: #1B3527;
+        --i: #EE8A76; --i-ink: #F4A897; --i-soft: #3E211D;
+        --n: #A99BEB; --n-ink: #C1B7F2; --n-soft: #26214A;
+        --line-strong: #ECEDF2; --line-weak: #5C6072; --link: #7FAAF0;
+      }
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #14151A; --surface: #1B1C23; --surface-2: #23242D;
+      --ink: #ECEDF2; --ink-2: #C4C6D1; --muted: #8E92A3;
+      --rule: #30323D; --rule-soft: #262832;
+      --k: #7F8496; --k-ink: #B3B7C4; --k-soft: #262833;
+      --u: #F0A868; --u-ink: #F5BE8C; --u-soft: #3E2A17;
+      --t: #6FC494; --t-ink: #9ADBB5; --t-soft: #1B3527;
+      --i: #EE8A76; --i-ink: #F4A897; --i-soft: #3E211D;
+      --n: #A99BEB; --n-ink: #C1B7F2; --n-soft: #26214A;
+      --line-strong: #ECEDF2; --line-weak: #5C6072; --link: #7FAAF0;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    :focus-visible { outline: 2px solid var(--link); outline-offset: 3px; border-radius: 2px; }
+    img { max-width: 100%; height: auto; display: block; }
+    sup { font-size: 0.66em; line-height: 0; }
+    p { margin: 0 0 14px; }
+    code { font-family: var(--mono); font-size: 0.9em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+    .wrap { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+    .cards > *, .evidence > *, .evidence .tablewrap, .setup > * { min-width: 0; }
+
+    /* top bar */
+    .topbar { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--rule-soft); }
+    .topbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 48px; }
+    .venue { font-size: 14px; font-weight: 600; white-space: nowrap; }
+    .topnav { display: flex; gap: 2px; flex-wrap: wrap; justify-content: flex-end; }
+    .topnav a { font-size: 14px; color: var(--ink-2); padding: 5px 9px; border-radius: 5px; }
+    .topnav a:hover { background: var(--surface-2); color: var(--ink); text-decoration: none; }
+    @media (max-width: 760px) { .topnav a.optional { display: none; } }
+    @media (max-width: 560px) { .topnav { display: none; } }
+
+    /* hero */
+    .hero { padding: 52px 0 28px; text-align: center; }
+    h1 { font-family: var(--sans); font-weight: 700; font-size: clamp(1.7rem, 4vw, 2.6rem); line-height: 1.2; margin: 0 auto 18px; max-width: 26ch; text-wrap: balance; }
+    .authors { font-size: 17px; line-height: 1.7; margin: 0 auto 4px; max-width: 46rem; }
+    .authors sup { color: var(--muted); }
+    .affils { font-size: 14.5px; color: var(--ink-2); line-height: 1.6; margin: 0 auto 6px; max-width: 46rem; }
+    .marks { font-size: 13px; color: var(--muted); margin: 0 0 22px; }
+    .links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 8px; }
+    .btn { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 500; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--ink); background: var(--ink); color: var(--bg); }
+    .btn:hover { text-decoration: none; opacity: 0.85; }
+    .btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* sections */
+    section.block { padding: 36px 0 8px; }
+    section[id], h3[id] { scroll-margin-top: 56px; }
+    h2 { font-weight: 700; font-size: 1.5rem; line-height: 1.3; margin: 0 0 14px; text-wrap: balance; }
+    h3 { font-weight: 600; font-size: 1.1rem; margin: 26px 0 8px; }
+    h3 .tag { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 4px; margin-left: 8px; vertical-align: 2px; }
+    h3 .tag.u { background: var(--u-soft); color: var(--u-ink); }
+    h3 .tag.t { background: var(--t-soft); color: var(--t-ink); }
+    h3 .tag.i { background: var(--i-soft); color: var(--i-ink); }
+    h3 .tag.n { background: var(--n-soft); color: var(--n-ink); }
+    .finding { font-weight: 600; }
+    .tldr { font-weight: 600; font-size: 17px; line-height: 1.55; margin: 0 0 6px; }
+    ol.flow { margin: 0 0 14px; padding-left: 1.4em; }
+    ol.flow li { margin: 0 0 8px; }
+    ol.flow li a { color: var(--link); }
+    ol.flow li a b { font-weight: 700; margin-right: 2px; }
+    ol.flow li a::after { content: " ↓"; font-size: 12px; color: var(--muted); }
+    ul.plain { margin: 0 0 14px; padding-left: 1.25em; }
+    ul.plain li { margin: 0 0 8px; }
+    .tnote { font-size: 13.5px; color: var(--muted); margin: 6px 0 0; line-height: 1.55; }
+
+    /* interactive panel */
+    .thesis { padding: 8px 0 0; }
+    .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+    .panel-head { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--rule-soft); }
+    .panel-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+    .panel-title { font-size: 15px; font-weight: 600; margin: 0; }
+    .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+    .seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+    .seg button, .chips button { font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; background: transparent; color: var(--ink-2); border: 0; padding: 5px 10px; }
+    .seg button + button { border-left: 1px solid var(--rule); }
+    .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+    .chips .lab { font-size: 12px; color: var(--muted); margin-right: 4px; }
+    .chips button { border: 1px solid var(--rule); border-radius: 999px; padding: 3px 10px 3px 8px; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; }
+    .chips button::before { content: ""; width: 10px; height: 10px; border-radius: 2px; background: var(--sw); flex: none; }
+    .chips button:hover { border-color: var(--ink-2); color: var(--ink); }
+    .chips button[aria-pressed="false"] { opacity: 0.45; }
+    .chips button[aria-pressed="false"]::before { background: var(--rule); }
+    .bars { padding: 6px 10px 2px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .bars svg { display: block; width: 100%; min-width: 640px; height: auto; font-family: var(--sans); }
+    .bars .axis { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+    .bars .grid { stroke: var(--rule-soft); stroke-width: 1; }
+    .bars .lbl { font-size: 12.5px; fill: var(--ink); }
+    .bars .val { font-size: 10.5px; fill: var(--ink-2); font-variant-numeric: tabular-nums; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+    .bars .bar { rx: 2; }
+    .bars .bar.k { fill: var(--k); } .bars .bar.u { fill: var(--u); } .bars .bar.t { fill: var(--t); } .bars .bar.i { fill: var(--i); } .bars .bar.n { fill: var(--n); }
+    .bars g.grp:hover .bar { opacity: 0.85; }
+    .bars g.grp:hover .lbl { font-weight: 600; }
+    .bars .off .bar { opacity: 0.12; }
+    .bars .off .val { display: none; }
+    .bars .base { stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 4 3; opacity: 0.8; }
+    .bars .baselab { font-size: 11.5px; fill: var(--ink-2); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .panel-foot { display: flex; flex-wrap: wrap; gap: 6px 24px; align-items: baseline; padding: 10px 16px 12px; border-top: 1px solid var(--rule-soft); font-size: 13.5px; color: var(--ink-2); }
+    .stat { color: var(--ink); font-variant-numeric: tabular-nums; }
+    .stat .k { color: var(--muted); }
+    .caption { font-size: 14px; color: var(--ink-2); line-height: 1.55; margin: 10px 0 0; }
+
+    /* behavior cards */
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 14px 0 6px; }
+    @media (max-width: 720px) { .cards { grid-template-columns: 1fr; } }
+    .card { border: 1px solid var(--rule); border-top: 3px solid var(--rule); border-radius: 8px; padding: 14px 16px 12px; background: var(--surface); font-size: 14.5px; line-height: 1.55; }
+    .card.u { border-top-color: var(--u); } .card.t { border-top-color: var(--t); } .card.i { border-top-color: var(--i); } .card.n { border-top-color: var(--n); }
+    .card .name { font-size: 1.05rem; font-weight: 700; margin: 0 0 2px; }
+    .card.u .name { color: var(--u); } .card.t .name { color: var(--t); } .card.i .name { color: var(--i); } .card.n .name { color: var(--n); }
+    .card .def { margin: 0 0 10px; color: var(--ink); }
+    .card .why { margin: 0 0 10px; color: var(--ink-2); font-size: 14px; }
+    .card .ex { margin: 0 0 12px; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+    .card.u .ex { background: var(--u-soft); color: var(--u-ink); } .card.t .ex { background: var(--t-soft); color: var(--t-ink); } .card.i .ex { background: var(--i-soft); color: var(--i-ink); } .card.n .ex { background: var(--n-soft); color: var(--n-ink); }
+    .card .ex q { font-weight: 600; }
+    .card .ex .dim { display: block; font-weight: 400; opacity: 0.85; font-size: 13px; margin-top: 3px; }
+    .card .how { margin: 0; font-size: 14px; color: var(--ink-2); }
+    .card .how b { color: var(--ink); }
+    .card .acts { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; }
+    .card .acts span { font-size: 12px; padding: 1px 8px; border-radius: 4px; border: 1px solid var(--rule); color: var(--ink-2); background: var(--surface-2); }
+
+    /* setup grid */
+    .setup { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; margin: 8px 0 12px; font-size: 14.5px; }
+    @media (max-width: 720px) { .setup { grid-template-columns: 1fr; } }
+    .setup div { border-top: 1px solid var(--rule-soft); padding-top: 8px; }
+    .setup b { display: block; font-size: 12.5px; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 2px; }
+
+    /* tables */
+    .tablewrap { overflow-x: auto; margin: 12px 0 6px; -webkit-overflow-scrolling: touch; }
+    table.data { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+    table.data th, table.data td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--rule-soft); white-space: nowrap; }
+    table.data th { font-weight: 600; font-size: 13px; color: var(--ink-2); background: var(--surface-2); }
+    table.data th.l, table.data td.l { text-align: left; }
+    table.data th.grp { text-align: center; border-bottom: 1px solid var(--rule); }
+    table.data th.u { color: var(--u); } table.data th.t { color: var(--t); } table.data th.i { color: var(--i); } table.data th.n { color: var(--n); }
+    table.data td.num { font-size: 13.5px; }
+    table.data td b { font-weight: 700; }
+    table.data tr.sep td { border-top: 2px solid var(--rule); }
+    table.data tr.sub td { color: var(--muted); font-size: 13px; }
+    table.data tr.sub td.l { padding-left: 22px; }
+    table.data td.lo { color: var(--i-ink); font-weight: 600; }
+    table.data td.hi { color: var(--t-ink); font-weight: 600; }
+    table.data tbody tr:last-child td { border-bottom: 0; }
+    .tablewrap.narrow { max-width: 620px; }
+    @media (max-width: 600px) { table.data { font-size: 13px; } table.data th, table.data td { padding: 5px 7px; } }
+
+    /* evidence grids */
+    .evidence { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px 28px; align-items: start; }
+    @media (max-width: 760px) { .evidence { grid-template-columns: 1fr; } }
+    .evidence .tablewrap { margin-top: 0; }
+    .aside-lab { font-size: 12.5px; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
+
+    /* figures */
+    figure { margin: 16px 0 0; }
+    figure .frame { background: #FFFFFF; border: 1px solid var(--rule); border-radius: 6px; padding: 8px; }
+    figure figcaption { font-size: 14px; color: var(--ink-2); margin-top: 8px; line-height: 1.55; }
+    figure figcaption b { color: var(--ink); font-weight: 600; }
+    figure.paperfig .frame { max-width: 760px; margin: 0 auto; }
+
+    /* stacked bars (human evaluation) */
+    .stack { margin: 12px 0 4px; max-width: 620px; }
+    .stack .row { display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: center; margin: 0 0 6px; font-size: 13.5px; }
+    .stack .row .name { color: var(--ink-2); }
+    .stack .track { display: flex; height: 26px; border-radius: 4px; overflow: hidden; border: 1px solid var(--rule); }
+    .stack .p, .stack .o { display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .stack .p { background: var(--surface-2); color: var(--ink-2); }
+    .stack .o { background: var(--ink); color: var(--bg); font-weight: 600; }
+    .stack .key { display: flex; gap: 18px; font-size: 13px; color: var(--ink-2); margin-top: 8px; }
+    .stack .key span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; border: 1px solid var(--rule); }
+    .stack .key .kp::before { background: var(--surface-2); } .stack .key .ko::before { background: var(--ink); border-color: var(--ink); }
+    @media (max-width: 480px) { .stack .row { grid-template-columns: 110px 1fr; } }
+
+    /* code */
+    pre.code { font-family: var(--mono); font-size: 13px; line-height: 1.55; background: var(--surface-2); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; margin: 0; color: var(--ink); overflow-x: auto; }
+    pre.code .cm { color: var(--muted); }
+
+    /* bibtex */
+    pre.bib { font-family: var(--mono); font-size: 13px; line-height: 1.55; margin: 0; background: var(--surface-2); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; overflow-x: auto; color: var(--ink); }
+    .bibhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .copy { font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 5px 12px; }
+    .copy:hover { border-color: var(--ink); }
+
+    footer { border-top: 1px solid var(--rule); margin-top: 40px; padding: 28px 0 40px; font-size: 13.5px; color: var(--muted); }
+    footer p { margin: 0 0 8px; }
+    footer a { color: var(--ink-2); }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="venue">ICLR 2026</div>
+    <nav class="topnav" aria-label="Page">
+      <a href="#overview" class="optional">TL;DR</a>
+      <a href="#behaviors">Behaviors</a>
+      <a href="#simulator">Simulator</a>
+      <a href="#results">Results</a>
+      <a href="#finetuning" class="optional">Fine-tuning</a>
+      <a href="#simeval" class="optional">Simulator quality</a>
+      <a href="#code">Code</a>
+      <a href="#bibtex">BibTeX</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <h1>Non-Collaborative User Simulators for Tool Agents</h1>
+      <p class="authors">
+        <a href="https://jeonghoon-shim.github.io/">Jeonghoon Shim</a>,
+        <a href="https://opusdeisong.github.io/">Woojung Song</a>,
+        <a href="https://hzlcodus.github.io/website/">Cheyon Jin</a>,
+        Seungwon Kook,
+        <a href="https://yohanjo.github.io/">Yohan Jo</a><sup>†</sup>
+      </p>
+      <p class="affils">Graduate School of Data Science, Seoul National University</p>
+      <p class="marks">† Corresponding author</p>
+      <div class="links">
+        <a class="btn" href="https://arxiv.org/pdf/2509.23124">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h8"/></svg>
+          Paper
+        </a>
+        <a class="btn" href="https://arxiv.org/abs/2509.23124">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M12 4v16"/></svg>
+          arXiv
+        </a>
+        <a class="btn" href="https://openreview.net/forum?id=UAUimofy3W">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M4 17a2 2 0 0 1 2-2h12"/></svg>
+          OpenReview
+        </a>
+        <a class="btn" href="https://github.com/holi-lab/NCUser">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4l-5 8 5 8M16 4l5 8-5 8"/></svg>
+          Code
+        </a>
+        <a class="btn" href="https://huggingface.co/holi-lab">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+          Models
+        </a>
+        <a class="btn" href="#bibtex">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16H7z"/><path d="M10 9h4M10 13h4"/></svg>
+          BibTeX
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="overview">
+    <div class="wrap">
+      <h2>TL;DR</h2>
+      <p class="tldr">Tool agents are trained and tested against user simulators that always cooperate. We build a simulator that behaves the way real users sometimes do, asking for things the agent cannot do, drifting off topic, losing patience, and typing half-sentences, while still delivering every piece of information the task needs. State-of-the-art agents degrade under every one of these behaviors, and fine-tuning on collaborative data alone does not fix it.</p>
+      <p>Five questions, answered on MultiWOZ and τ-bench with five agent LLMs:</p>
+      <ol class="plain flow">
+        <li><a href="#behaviors"><b>Which behaviors?</b> What do non-collaborative users actually do?</a> Four things, grounded in marketing research and real user–LLM chat logs: request an <em>unavailable service</em>, go off on a <em>tangent</em>, show <em>impatience</em>, and send <em>incomplete utterances</em>.</li>
+        <li><a href="#simulator"><b>How to simulate them</b> without losing the goal?</a> A collaborative backbone with a dialogue state tracker and an ending verifier, plus one LLM module per behavior. Only 3.0% of simulated dialogues miss a goal item on the first attempt, and those are regenerated.</li>
+        <li><a href="#results"><b>How much do agents suffer?</b></a> Every model drops. Tangential users cost the most (29.1% relative success on average), each behavior breaks agents in its own way, and even GPT-4.1-mini loses up to 17 points when two behaviors co-occur.</li>
+        <li><a href="#finetuning"><b>Does fine-tuning help?</b></a> Collaborative-only SFT lifts 3B models above 90% on collaborative users but leaves the unavailable-service and incomplete-utterance modes 15 to 30 points behind. Adding non-collaborative dialogues raises the average from 78.8 to 86.9.</li>
+        <li><a href="#simeval"><b>Is the simulator realistic?</b></a> It is harder on agents than a prompt-only simulator at the same goal alignment, and human annotators prefer its dialogues in about 70% of pairwise comparisons.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="thesis">
+    <div class="wrap">
+      <p>Pick a benchmark and a metric: each group is one agent LLM, each bar one user mode. <em>Relative SR</em> divides by the collaborative score, so bars below the dashed line are losses caused by the behavior.</p>
+      <div class="panel" id="barPanel">
+        <div class="panel-head">
+          <div class="panel-row">
+            <h2 class="panel-title">Five agents, five kinds of user</h2>
+            <div class="controls">
+              <div class="seg" role="group" aria-label="Benchmark">
+                <button type="button" data-bench="multiwoz" aria-pressed="true">MultiWOZ</button>
+                <button type="button" data-bench="tau" aria-pressed="false">τ-bench</button>
+              </div>
+              <div class="seg" role="group" aria-label="Metric">
+                <button type="button" data-metric="sr" aria-pressed="true">Success rate</button>
+                <button type="button" data-metric="rel" aria-pressed="false">Relative SR</button>
+              </div>
+            </div>
+          </div>
+          <div class="chips" id="modeChips" role="group" aria-label="User mode"></div>
+        </div>
+        <div class="bars"><svg id="bars" role="img" aria-label="Success rate of each agent model under the collaborative user and the four non-collaborative user modes"></svg></div>
+        <div class="panel-foot">
+          <span class="stat"><span class="k">mean relative SR over the four behaviors&nbsp;</span><span id="statMean">—</span></span>
+          <span class="stat"><span class="k">largest loss&nbsp;</span><span id="statMin">—</span></span>
+          <span id="statNote"></span>
+        </div>
+      </div>
+      <p class="caption">Table 1 of the paper. Success rate is the share of simulations whose final database state exactly matches the ground truth, averaged over 4 trials per scenario (89 scenarios on MultiWOZ, 157 on τ-bench). Click a legend entry to dim the other modes.</p>
+    </div>
+  </section>
+
+  <section class="block" id="behaviors">
+    <div class="wrap">
+      <h2>Four non-collaborative behaviors</h2>
+      <p>We surveyed customer types from marketing research and user types from studies of user–LLM conversations, kept the ones that show up inside a dialogue, and clustered them into four categories. Each card gives the definition, an example, and how the simulator produces it.</p>
+      <div class="cards">
+        <article class="card u">
+          <h3 class="name">Unavailable service</h3>
+          <p class="def">Requests that no available API can fulfil, because the API is missing or lacks the needed parameter.</p>
+          <p class="why">Users do not know where the agent's boundaries are, so they ask for things it cannot do.</p>
+          <blockquote class="ex"><q>Book me a window seat on the train.</q><span class="dim">The train-booking API has no seat option, so the agent has to decline or set the request aside.</span></blockquote>
+          <p class="how"><b>Simulated by</b> GPT-4.1-mini reading the API documentation and the user goal, then writing three extra goal sentences that need a missing API or an unsupported parameter. They are appended to the original goal.</p>
+        </article>
+        <article class="card t">
+          <h3 class="name">Tangential</h3>
+          <p class="def">Utterances unrelated to the task, typically personal interests or background, and complaints when the agent ignores them.</p>
+          <div class="acts"><span>Factual question</span><span>Opinion question</span><span>General opinion</span><span>Non-opinion statement</span></div>
+          <blockquote class="ex"><q>By the way, where do you think I should visit first traveling in NA?</q><span class="dim">Asked in the middle of a train booking. If the agent presses on with the transaction, the user feels unheard.</span></blockquote>
+          <p class="how"><b>Simulated by</b> sampling a persona from Persona Hub, having GPT-4o-mini write a tangential utterance in one of the four dialogue acts, and merging it with the collaborative utterance. A checker tests whether the agent responded; if not, a complaint replaces or augments the next turn.</p>
+        </article>
+        <article class="card i">
+          <h3 class="name">Impatience</h3>
+          <p class="def">Emotional reactions when the agent takes too long or keeps failing, escalating over the dialogue.</p>
+          <div class="acts"><span>Belligerent abuse</span><span>Threat</span><span>Urge</span></div>
+          <blockquote class="ex"><q>Stop wasting my time and just get it done!</q><span class="dim">After a booking attempt fails again.</span></blockquote>
+          <p class="how"><b>Simulated by</b> two triggers: the agent reports a failure (detected by GPT-4.1-mini), or all goal information has been given and the task is still unresolved (from the state tracker). Anger fires with a probability that starts at 0.5 and rises by 0.1 per trigger; once expressed, the user stays cynical for the rest of the dialogue.</p>
+        </article>
+        <article class="card n">
+          <h3 class="name">Incomplete utterances</h3>
+          <p class="def">Poorly articulated messages: extremely brief ones, or ones sent before they were finished.</p>
+          <p class="why">Least-effort typing, as seen throughout LMSYS and WildChat conversations.</p>
+          <blockquote class="ex"><q>Book train, 2</q> &nbsp;·&nbsp; <q>I want to res</q><span class="dim">Both stand for “I want to reserve a train for 2 people.”</span></blockquote>
+          <p class="how"><b>Simulated by</b> style transfer with five real brief messages as few-shot examples, or by cutting the collaborative utterance at a random point. The state tracker marks truncated information as unsent so it is delivered later.</p>
+        </article>
+      </div>
+      <figure class="paperfig">
+        <div class="frame"><img src="static/images/fig_non_coll_inject.png" alt="Four panels showing how each non-collaborative behavior is injected: augmenting the user goal with unavailable requests, merging a persona-driven tangential utterance and complaining when ignored, triggering impatient utterances on failure or delay with rising probability, and style-transferring or truncating collaborative utterances." width="1826" height="771"></div>
+        <figcaption><b>Figure 3 of the paper.</b> Each behavior is an intervention on the collaborative simulator's utterance: augment the goal (a), merge and complain (b), replace on failure or delay (c), rewrite or truncate (d).</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="block" id="simulator">
+    <div class="wrap">
+      <h2>A simulator that misbehaves but still finishes the job</h2>
+      <p>A non-collaborative simulator is only useful if the agent's failures are the agent's fault. Every behavior above is layered on a collaborative simulator that is built to deliver the whole user goal, so a failed task means the agent could not cope, not that the user forgot to mention something.</p>
+      <figure class="paperfig">
+        <div class="frame"><img src="static/images/fig_overall.png" alt="Overview: the environment (τ-bench and MultiWOZ user goals, databases, APIs) on the left, dialogue simulation and DB-state evaluation below, and on the right the user simulator built from user goal, instruction, and dialogue history with a dialogue state tracker and ending verifier, plus four non-collaborative modules that augment, replace, or rewrite the utterance." width="1823" height="727"></div>
+        <figcaption><b>Figure 1 of the paper.</b> Left: the tool-agent environment and DB-state evaluation. Right: the collaborative user simulator with its two goal-alignment modules, and the four non-collaborative modules that intervene on its output.</figcaption>
+      </figure>
+      <h3>Collaborative backbone</h3>
+      <p>The backbone is the prompt-based simulator of τ-bench, run with GPT-4.1-mini. It reads the user goal, an instruction, and the dialogue history, and emits <code>&lt;END&gt;</code> when it thinks the task is done. Two LLM modules keep it goal-aligned:</p>
+      <ul class="plain">
+        <li><span class="finding">Dialogue state tracker.</span> The user goal is sharded into information pieces. The tracker records which pieces have been conveyed at each turn and, if the simulator tries to stop with pieces left over, delivers the rest before ending.</li>
+        <li><span class="finding">Ending verifier.</span> Blocks <code>&lt;END&gt;</code> when the agent still has to act or is waiting for the user's confirmation, so the agent is never denied the chance to complete the booking.</li>
+      </ul>
+      <p>After every simulation, GPT-4o-mini checks <em>goal alignment</em>: whether every piece of information and intent in the user goal was communicated. Misaligned dialogues are regenerated. Across 1,230 dialogues spanning the collaborative and the four non-collaborative modes, only 37 (3.0%) failed this check on the first attempt, and the judge agrees with a human annotator at a Matthews correlation of 0.77 on 40 sampled dialogues.</p>
+
+      <h3>Evaluation setup</h3>
+      <div class="setup">
+        <div><b>MultiWOZ</b>Restaurant, hotel, taxi, and train bookings. We built a new agent environment with 11 APIs, including AppWorld-style helper APIs that the agent must call to discover API documentation. 89 test scenarios that require bookings across multiple domains.</div>
+        <div><b>τ-bench</b>Airline and retail tasks with reservations, updates, and cancellations. The original environment, with full API documentation in the system prompt; the <code>transfer_to_human</code> action is removed. 157 test scenarios.</div>
+        <div><b>Agent</b>ReAct, reasoning before each action, with a 30-step limit per dialogue. Five LLMs: GPT-4.1-mini, GPT-4.1-nano, Qwen3-235b-a22b, Qwen3-30b-a3b, Llama-3.1-70b-instruct.</div>
+        <div><b>Metric</b>Success rate (SR): the final database state exactly matches the ground truth. Averaged over 4 trials per scenario, so 356 simulations per mode on MultiWOZ and 628 on τ-bench.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="results">
+    <div class="wrap">
+      <h2>Results</h2>
+      <p class="tldr">Every agent loses success rate under every behavior, and each behavior breaks agents in a different way: unavailable services and incomplete utterances lead to immature tool use, while tangents and impatience expose weak dialogue management.</p>
+      <div class="tablewrap">
+        <table class="data">
+          <thead>
+            <tr><th class="l" rowspan="2">Model</th><th class="l" rowspan="2">Metric</th><th class="grp" colspan="5">MultiWOZ</th><th class="grp" colspan="5">τ-bench</th></tr>
+            <tr><th>Collab.</th><th class="u">Unavail.</th><th class="t">Tang.</th><th class="i">Impat.</th><th class="n">Incomp.</th><th>Collab.</th><th class="u">Unavail.</th><th class="t">Tang.</th><th class="i">Impat.</th><th class="n">Incomp.</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="l">GPT-4.1-mini</td><td class="l">SR</td><td class="num">92.7</td><td class="num">89.3</td><td class="num">89.3</td><td class="num">90.7</td><td class="num">88.2</td><td class="num">45.5</td><td class="num">41.7</td><td class="num">39.5</td><td class="num">45.1</td><td class="num">45.4</td></tr>
+            <tr class="sub"><td class="l"></td><td class="l">Relative SR</td><td class="num">100.0</td><td class="num">96.3</td><td class="num">96.3</td><td class="num">97.8</td><td class="num">95.1</td><td class="num">100.0</td><td class="num">91.6</td><td class="num">86.8</td><td class="num">98.9</td><td class="num">99.8</td></tr>
+            <tr class="sep"><td class="l">GPT-4.1-nano</td><td class="l">SR</td><td class="num">23.6</td><td class="num">16.9</td><td class="num">9.8</td><td class="num">26.7</td><td class="num">14.7</td><td class="num">12.0</td><td class="num">10.0</td><td class="num">6.8</td><td class="num">8.8</td><td class="num">8.0</td></tr>
+            <tr class="sub"><td class="l"></td><td class="l">Relative SR</td><td class="num">100.0</td><td class="num">71.6</td><td class="num lo">41.5</td><td class="num">113.1</td><td class="num">62.3</td><td class="num">100.0</td><td class="num">83.3</td><td class="num lo">56.7</td><td class="num">72.5</td><td class="num">66.7</td></tr>
+            <tr class="sep"><td class="l">Qwen3-235b-a22b</td><td class="l">SR</td><td class="num">77.8</td><td class="num">62.4</td><td class="num">57.3</td><td class="num">69.4</td><td class="num">69.9</td><td class="num">41.4</td><td class="num">36.8</td><td class="num">32.3</td><td class="num">37.6</td><td class="num">39.3</td></tr>
+            <tr class="sub"><td class="l"></td><td class="l">Relative SR</td><td class="num">100.0</td><td class="num">80.2</td><td class="num">73.7</td><td class="num">89.2</td><td class="num">89.8</td><td class="num">100.0</td><td class="num">88.9</td><td class="num">78.0</td><td class="num">90.8</td><td class="num">94.9</td></tr>
+            <tr class="sep"><td class="l">Qwen3-30b-a3b</td><td class="l">SR</td><td class="num">48.3</td><td class="num">47.2</td><td class="num">27.2</td><td class="num">41.0</td><td class="num">26.1</td><td class="num">27.9</td><td class="num">26.6</td><td class="num">20.4</td><td class="num">24.8</td><td class="num">30.1</td></tr>
+            <tr class="sub"><td class="l"></td><td class="l">Relative SR</td><td class="num">100.0</td><td class="num">97.7</td><td class="num lo">56.3</td><td class="num">84.9</td><td class="num lo">54.0</td><td class="num">100.0</td><td class="num">95.3</td><td class="num">73.1</td><td class="num">88.9</td><td class="num">107.9</td></tr>
+            <tr class="sep"><td class="l">Llama-3.1-70b-instruct</td><td class="l">SR</td><td class="num">62.6</td><td class="num">54.8</td><td class="num">49.4</td><td class="num">47.5</td><td class="num">48.6</td><td class="num">21.8</td><td class="num">18.5</td><td class="num">14.7</td><td class="num">17.8</td><td class="num">16.4</td></tr>
+            <tr class="sub"><td class="l"></td><td class="l">Relative SR</td><td class="num">100.0</td><td class="num">87.5</td><td class="num">78.9</td><td class="num">75.9</td><td class="num">77.6</td><td class="num">100.0</td><td class="num">84.9</td><td class="num">67.4</td><td class="num">81.7</td><td class="num">75.2</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tnote">Table 1 of the paper. Relative SR is SR divided by the collaborative SR of the same model and benchmark. Values below 60 are marked.</p>
+
+      <h3 id="r-unavail">Unavailable service <span class="tag u">immature tool use</span></h3>
+      <div class="evidence">
+        <div>
+          <p><span class="finding">Agents re-fetch API documentation they already have.</span> When a request cannot be served, most agents repeatedly call the helper APIs that return documentation, as if searching for a solution that does not exist. On MultiWOZ, duplicated helper calls per dialogue jump for GPT-4.1-mini, GPT-4.1-nano, and Llama-3.1-70b. For GPT-4.1-nano these redundant calls eat the 30-step budget: the share of dialogues that hit the limit rises from 15% to 26%.</p>
+          <p>The Qwen models avoid the duplication, but they diverge: Qwen3-30b-a3b keeps 97.7% of its success rate, while Qwen3-235b-a22b falls to 80.2% because it starts <em>fabricating API results</em> instead of calling the API. Its hallucinated results per dialogue go from 0.33 in the collaborative mode to 1.13.</p>
+        </div>
+        <div>
+          <p class="aside-lab">Duplicated helper API calls per dialogue, MultiWOZ</p>
+          <div class="tablewrap narrow">
+            <table class="data">
+              <thead><tr><th class="l">Model</th><th>Collab.</th><th class="u">Unavail.</th></tr></thead>
+              <tbody>
+                <tr><td class="l">GPT-4.1-mini</td><td class="num">0.02</td><td class="num lo">0.57</td></tr>
+                <tr><td class="l">GPT-4.1-nano</td><td class="num">0.65</td><td class="num lo">0.91</td></tr>
+                <tr><td class="l">Qwen3-235b-a22b</td><td class="num">0.13</td><td class="num">0.18</td></tr>
+                <tr><td class="l">Qwen3-30b-a3b</td><td class="num">0.01</td><td class="num">0.02</td></tr>
+                <tr><td class="l">Llama-3.1-70b</td><td class="num">1.29</td><td class="num lo">1.91</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <h3 id="r-tangential">Tangential <span class="tag t">dialogue management</span></h3>
+      <div class="evidence">
+        <div>
+          <p><span class="finding">The most damaging behavior: 29.1% relative success lost on average.</span> Agents that juggle an off-topic thread increasingly fail to do the core task at all. “No book” errors on MultiWOZ and “no ground-truth API” errors on τ-bench both rise in this mode for every model.</p>
+          <p>GPT-4.1-nano falls the furthest (to 41.5% of its collaborative score on MultiWOZ) because it triggers the most user complaints: it ignores the tangent, the simulator complains, and the exchange repeats until the 30-step limit is exhausted. The share of its MultiWOZ dialogues that run out of steps goes from 15% to 44%.</p>
+        </div>
+        <div>
+          <p class="aside-lab">Dialogues that hit the 30-step limit, MultiWOZ</p>
+          <div class="tablewrap narrow">
+            <table class="data">
+              <thead><tr><th class="l">Model</th><th>Collab.</th><th class="t">Tang.</th></tr></thead>
+              <tbody>
+                <tr><td class="l">GPT-4.1-mini</td><td class="num">1%</td><td class="num">3%</td></tr>
+                <tr><td class="l">GPT-4.1-nano</td><td class="num">15%</td><td class="num lo">44%</td></tr>
+                <tr><td class="l">Qwen3-235b-a22b</td><td class="num">5%</td><td class="num">9%</td></tr>
+                <tr><td class="l">Qwen3-30b-a3b</td><td class="num">20%</td><td class="num lo">35%</td></tr>
+                <tr><td class="l">Llama-3.1-70b</td><td class="num">22%</td><td class="num lo">38%</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <h3 id="r-impatience">Impatience <span class="tag i">dialogue management</span></h3>
+      <div class="evidence">
+        <div>
+          <p><span class="finding">Agents apologize instead of acting, and the ones that apologize most lose most.</span> Impatience is the mildest behavior overall; GPT-4.1-mini holds its score on both benchmarks. But every model multiplies its apology utterances when the user gets angry, a habit that likely comes from preference training. Under a 30-step budget, apologizing delays task completion and provokes more anger, a negative feedback loop. Llama-3.1-70b, Qwen3-30b-a3b, and Qwen3-235b-a22b have the highest apology ratios and, in that order, the largest losses.</p>
+        </div>
+        <div>
+          <p class="aside-lab">Apology share of agent utterances, collaborative → impatient</p>
+          <div class="tablewrap narrow">
+            <table class="data">
+              <thead><tr><th class="l">Model</th><th>MultiWOZ</th><th>τ-bench</th></tr></thead>
+              <tbody>
+                <tr><td class="l">GPT-4.1-mini</td><td class="num">.01 → .14</td><td class="num">.02 → .12</td></tr>
+                <tr><td class="l">GPT-4.1-nano</td><td class="num">.16 → .36</td><td class="num">.06 → .21</td></tr>
+                <tr><td class="l">Qwen3-235b-a22b</td><td class="num">.02 → .12</td><td class="num">.03 → .14</td></tr>
+                <tr><td class="l">Qwen3-30b-a3b</td><td class="num">.03 → .25</td><td class="num">.07 → .24</td></tr>
+                <tr><td class="l">Llama-3.1-70b</td><td class="num">.16 → .35</td><td class="num">.21 → .38</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <h3 id="r-incomplete">Incomplete utterances <span class="tag n">immature tool use</span></h3>
+      <div class="evidence">
+        <div>
+          <p><span class="finding">Terse users make agents invent API parameters, but only where documentation must be looked up.</span> MultiWOZ suffers far more than τ-bench in this mode. The difference is API access: τ-bench puts the full documentation in the system prompt, while MultiWOZ agents must fetch it through helper APIs. On MultiWOZ, calls with undocumented parameter keys rise for every model when utterances are brief or cut off; on τ-bench they stay near zero. Qwen3-30b-a3b even improves on τ-bench (107.9% relative SR) while losing almost half its score on MultiWOZ.</p>
+        </div>
+        <div>
+          <p class="aside-lab">API calls with hallucinated parameter keys per dialogue, MultiWOZ</p>
+          <div class="tablewrap narrow">
+            <table class="data">
+              <thead><tr><th class="l">Model</th><th>Collab.</th><th class="n">Incomp.</th></tr></thead>
+              <tbody>
+                <tr><td class="l">GPT-4.1-mini</td><td class="num">0.52</td><td class="num lo">1.05</td></tr>
+                <tr><td class="l">GPT-4.1-nano</td><td class="num">1.72</td><td class="num lo">2.19</td></tr>
+                <tr><td class="l">Qwen3-235b-a22b</td><td class="num">1.97</td><td class="num">2.15</td></tr>
+                <tr><td class="l">Qwen3-30b-a3b</td><td class="num">4.78</td><td class="num lo">6.44</td></tr>
+                <tr><td class="l">Llama-3.1-70b</td><td class="num">2.76</td><td class="num lo">3.66</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <h3 id="r-size">Model size is not robustness</h3>
+      <p>GPT-4.1-mini is the most robust model and beats GPT-4.1-nano on relative SR under every behavior. Within the Qwen family, though, there is no clean size effect: the 235B model is more resilient in some modes and the 30B model in others, depending on the behavior and benchmark. Size alone does not predict how an agent handles a difficult user.</p>
+
+      <h3 id="r-multi">Two behaviors at once</h3>
+      <div class="evidence">
+        <div>
+          <p><span class="finding">Even the most robust agent breaks when behaviors co-occur.</span> Real users rarely misbehave in only one way. Pairing behaviors costs GPT-4.1-mini up to 16.6 points on MultiWOZ (tangential + incomplete) and 11.7 points on τ-bench (impatient + tangential), losses several times larger than under any single behavior. The full comparison against a prompt-only simulator is in the <a href="#simeval">simulator quality</a> section.</p>
+        </div>
+        <div>
+          <p class="aside-lab">GPT-4.1-mini success rate, our simulator</p>
+          <div class="tablewrap narrow">
+            <table class="data">
+              <thead><tr><th class="l">User modes</th><th>MultiWOZ</th><th>τ-bench</th></tr></thead>
+              <tbody>
+                <tr><td class="l">Collaborative</td><td class="num">92.7</td><td class="num">45.5</td></tr>
+                <tr><td class="l">Impatience + Unavailable</td><td class="num">82.3</td><td class="num">40.9</td></tr>
+                <tr><td class="l">Tangential + Incomplete</td><td class="num lo">76.1</td><td class="num">34.6</td></tr>
+                <tr><td class="l">Tangential + Unavailable</td><td class="num">86.0</td><td class="num">36.8</td></tr>
+                <tr><td class="l">Impatience + Tangential</td><td class="num">82.9</td><td class="num lo">33.8</td></tr>
+                <tr><td class="l">Incomplete + Unavailable</td><td class="num">78.1</td><td class="num">40.0</td></tr>
+                <tr><td class="l">Incomplete + Impatience</td><td class="num">80.1</td><td class="num">38.1</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <h3 id="r-extend">Beyond tool use: ColBench and MINT</h3>
+      <p>The simulator ports to other dialogue settings with small adjustments. On ColBench backend programming, which involves no external tools, the pattern matches the tool-agent results: GPT-4.1-mini is the most robust and the tangential and incomplete modes hurt most. On MINT HotpotQA, where the user and agent collaborate on a problem, no such trend appears, and Qwen3-30b-a3b, robust to unavailable services everywhere else, degrades there. Domains built around fulfilling a user goal behave alike; domains with a different interaction structure do not.</p>
+      <div class="tablewrap">
+        <table class="data">
+          <thead>
+            <tr><th class="l" rowspan="2">Model</th><th class="grp" colspan="5">ColBench · backend programming</th><th class="grp" colspan="5">MINT · HotpotQA</th></tr>
+            <tr><th>Collab.</th><th class="u">Unavail.</th><th class="t">Tang.</th><th class="i">Impat.</th><th class="n">Incomp.</th><th>Collab.</th><th class="u">Unavail.</th><th class="t">Tang.</th><th class="i">Impat.</th><th class="n">Incomp.</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="l">GPT-4.1-mini</td><td class="num">50.3</td><td class="num">49.4</td><td class="num">46.2</td><td class="num">45.4</td><td class="num">46.9</td><td class="num">52.3</td><td class="num">53.5</td><td class="num">54.1</td><td class="num">52.9</td><td class="num">50.6</td></tr>
+            <tr><td class="l">GPT-4.1-nano</td><td class="num">46.1</td><td class="num">46.5</td><td class="num">39.0</td><td class="num">46.2</td><td class="num">40.1</td><td class="num">45.9</td><td class="num">44.8</td><td class="num">44.2</td><td class="num">40.7</td><td class="num">46.5</td></tr>
+            <tr><td class="l">Qwen3-30b-a3b</td><td class="num">29.4</td><td class="num">36.2</td><td class="num">23.3</td><td class="num">24.4</td><td class="num">23.8</td><td class="num">40.1</td><td class="num">34.3</td><td class="num">39.0</td><td class="num">34.3</td><td class="num">36.6</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tnote">Table 2 of the paper. Success rates averaged over 4 trials.</p>
+    </div>
+  </section>
+
+  <section class="block" id="finetuning">
+    <div class="wrap">
+      <h2>Fine-tuning on collaborative data leaves agents fragile</h2>
+      <p>Practitioners typically fine-tune a small model on their own task data, and that data comes from cooperative users. We fine-tuned Llama-3.2-3b-instruct, Qwen2.5-3b-instruct, and Qwen2.5-7b-instruct (QLoRA) on successful MultiWOZ dialogues between GPT-4.1-mini and the collaborative simulator.</p>
+      <p><span class="finding">The gains do not transfer.</span> Zero-shot, these models succeed under 4% of the time; after fine-tuning they exceed 90% with collaborative users. Under non-collaborative users the improvement lags, worst for unavailable services (61 to 77%) and incomplete utterances (72 to 82%). The fine-tuned agents make more duplicated helper API calls in the unavailable-service mode and more parameter hallucinations in the incomplete-utterance mode than the zero-shot baselines did.</p>
+      <figure class="paperfig">
+        <div class="frame"><img src="static/images/fig_sft.png" alt="Grouped bar chart of success rates for three fine-tuned small models under five user modes. Collaborative scores are 90.7, 91.6, and 92.4; unavailable-service scores are 69.4, 61.2, and 77.2; incomplete-utterance scores are 71.9, 73.0, and 82.0. A line marks zero-shot performance under 4 percent." width="2522" height="903"></div>
+        <figcaption><b>Figure 4 of the paper.</b> Success rate on MultiWOZ after SFT on collaborative dialogues only. The red line is the zero-shot level of the same base models.</figcaption>
+      </figure>
+      <h3>Adding non-collaborative dialogues to the training set</h3>
+      <p>Mixing in dialogues from the four non-collaborative modes in equal proportion (“uniformly weighted”) lifts Qwen2.5-3b-instruct on every behavior and raises the average from 78.8 to 86.9, with the biggest jump on unavailable services. Up-weighting the incomplete-utterance data closes that mode's gap further but costs a little elsewhere, so the average is unchanged. Uniform weighting is a reasonable default; up-weight a behavior when a minimum service level must hold for that kind of customer.</p>
+      <div class="tablewrap">
+        <table class="data">
+          <thead><tr><th class="l">Training data (Qwen2.5-3b-instruct)</th><th>Collab.</th><th class="u">Unavail.</th><th class="t">Tang.</th><th class="i">Impat.</th><th class="n">Incomp.</th><th>Average</th></tr></thead>
+          <tbody>
+            <tr><td class="l">Collaborative only</td><td class="num">91.6</td><td class="num lo">61.2</td><td class="num">83.1</td><td class="num">85.1</td><td class="num">73.0</td><td class="num">78.8</td></tr>
+            <tr><td class="l">+ non-collaborative, uniformly weighted</td><td class="num">93.5</td><td class="num hi">85.7</td><td class="num">87.4</td><td class="num">89.6</td><td class="num">78.4</td><td class="num"><b>86.9</b></td></tr>
+            <tr><td class="l">+ non-collaborative, incomplete up-weighted</td><td class="num">91.6</td><td class="num hi">85.7</td><td class="num">85.7</td><td class="num">87.6</td><td class="num hi">82.3</td><td class="num">86.6</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tnote">Table 3 of the paper. Success rate on MultiWOZ. The fine-tuned checkpoints and training sets are released (see <a href="#code">Code</a>).</p>
+    </div>
+  </section>
+
+  <section class="block" id="simeval">
+    <div class="wrap">
+      <h2>Is the simulator itself any good?</h2>
+      <p>A non-collaborative simulator should be hard on agents, still convey the whole goal, and read as natural. We compare against a <em>prompt-based user simulator</em> (PBUS), which follows τ-bench's prompt-only approach and simply adds the behavior descriptions to the prompt, with no extra modules. The comparison uses the harder setting of two behaviors at once.</p>
+      <h3>Difficulty and goal alignment</h3>
+      <p><span class="finding">PBUS barely moves the agent; ours does, at the same or better goal alignment.</span> Under PBUS, GPT-4.1-mini's success rate changes little across behavior pairs. Under our simulator it drops consistently. Initial goal alignment (IGA), the share of dialogues that convey every goal item on the first attempt, is comparable on MultiWOZ and higher on τ-bench, so the extra difficulty comes from the behaviors, not from a user who forgot to say something.</p>
+      <div class="tablewrap">
+        <table class="data">
+          <thead>
+            <tr><th class="l" rowspan="2">Benchmark</th><th class="l" rowspan="2">Simulator</th><th class="grp" colspan="2">COL</th><th class="grp" colspan="2">IMP+UNA</th><th class="grp" colspan="2">TAN+INC</th><th class="grp" colspan="2">TAN+UNA</th><th class="grp" colspan="2">IMP+TAN</th><th class="grp" colspan="2">INC+UNA</th><th class="grp" colspan="2">INC+IMP</th></tr>
+            <tr><th>SR</th><th>IGA</th><th>SR</th><th>IGA</th><th>SR</th><th>IGA</th><th>SR</th><th>IGA</th><th>SR</th><th>IGA</th><th>SR</th><th>IGA</th><th>SR</th><th>IGA</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="l">MultiWOZ</td><td class="l">PBUS</td><td class="num">93.5</td><td class="num">97.8</td><td class="num">84.6</td><td class="num">91.6</td><td class="num">87.6</td><td class="num">98.6</td><td class="num">84.6</td><td class="num">95.5</td><td class="num">90.2</td><td class="num">96.9</td><td class="num">90.4</td><td class="num">89.0</td><td class="num">92.4</td><td class="num">97.5</td></tr>
+            <tr><td class="l"></td><td class="l"><b>Ours</b></td><td class="num">92.7</td><td class="num">97.8</td><td class="num">82.3</td><td class="num">89.9</td><td class="num lo">76.1</td><td class="num">98.0</td><td class="num">86.0</td><td class="num">94.9</td><td class="num">82.9</td><td class="num">97.5</td><td class="num lo">78.1</td><td class="num">91.0</td><td class="num">80.1</td><td class="num">96.3</td></tr>
+            <tr class="sep"><td class="l">τ-bench</td><td class="l">PBUS</td><td class="num">38.9</td><td class="num">87.8</td><td class="num">40.9</td><td class="num">92.4</td><td class="num">44.4</td><td class="num">95.8</td><td class="num">39.2</td><td class="num">97.9</td><td class="num">43.3</td><td class="num">96.0</td><td class="num">39.3</td><td class="num">92.3</td><td class="num">45.1</td><td class="num">88.3</td></tr>
+            <tr><td class="l"></td><td class="l"><b>Ours</b></td><td class="num">45.5</td><td class="num">97.5</td><td class="num">40.9</td><td class="num">98.1</td><td class="num lo">34.6</td><td class="num">96.4</td><td class="num">36.8</td><td class="num">99.5</td><td class="num lo">33.8</td><td class="num">97.7</td><td class="num">40.0</td><td class="num">97.7</td><td class="num">38.1</td><td class="num">93.8</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tnote">Table 4 of the paper, agent GPT-4.1-mini. COL collaborative, IMP impatience, UNA unavailable service, TAN tangential, INC incomplete utterance.</p>
+
+      <h3>Human evaluation</h3>
+      <p>Nine annotators compared dialogues from the two simulators pairwise, in single-behavior and combined-behavior settings. <span class="finding">Ours wins about 70% of comparisons overall</span>, and every single-behavior mode individually:</p>
+      <div class="stack" role="img" aria-label="Pairwise human preference, our simulator versus PBUS: impatience 83.3 percent ours, unavailable service 70.0, tangential 66.7, incomplete utterance 100.0">
+        <div class="row"><span class="name">Impatience</span><div class="track"><span class="p" style="width:16.7%">16.7%</span><span class="o" style="width:83.3%">83.3%</span></div></div>
+        <div class="row"><span class="name">Unavailable service</span><div class="track"><span class="p" style="width:30%">30.0%</span><span class="o" style="width:70%">70.0%</span></div></div>
+        <div class="row"><span class="name">Tangential</span><div class="track"><span class="p" style="width:33.3%">33.3%</span><span class="o" style="width:66.7%">66.7%</span></div></div>
+        <div class="row"><span class="name">Incomplete utterance</span><div class="track"><span class="o" style="width:100%">100.0%</span></div></div>
+        <div class="key"><span class="kp">PBUS preferred</span><span class="ko">Ours preferred</span></div>
+      </div>
+      <p class="tnote">Figure 5 of the paper, single-behavior mode. The performance drops above therefore come from believable difficult users, not from broken dialogues.</p>
+    </div>
+  </section>
+
+  <section class="block" id="takeaways">
+    <div class="wrap">
+      <h2>Takeaways</h2>
+      <ul class="plain">
+        <li><span class="finding">Test your agent against users who do not cooperate.</span> A collaborative simulator hides failure modes that appear the moment a user asks for the impossible, changes the subject, gets angry, or types “I want to res”.</li>
+        <li><span class="finding">Each behavior needs its own fix.</span> Unavailable services and incomplete utterances call for better grounding in API documentation; tangents and impatience call for dialogue strategies that acknowledge the user without stalling the task.</li>
+        <li><span class="finding">Put non-collaborative dialogues in the training set.</span> Collaborative-only SFT makes small agents look ready and leaves them fragile; a uniform mix of the four behaviors recovers most of the gap.</li>
+        <li><span class="finding">Goal alignment is what makes a hard simulator trustworthy.</span> A state tracker and an ending verifier are enough to keep a misbehaving user from forgetting the task, so failures can be attributed to the agent.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="block" id="code">
+    <div class="wrap">
+      <h2>Run the simulator on your own agent</h2>
+      <p>The repository ships both environments with separate conda setups. Behaviors are switched on by dropping YAML files into <code>non_coll_list/</code>; models, trial counts, and vLLM serving are set in the run script. Live runs need an OpenAI key (simulator and judge modules) and an OpenRouter key for the open-weight agents.</p>
+<pre class="code"><span class="cm"># MultiWOZ environment</span>
+git clone https://github.com/holi-lab/NCUser
+cd NCUser/multiwoz_env
+conda create -n multiwoz_env python=3.11 &amp;&amp; conda activate multiwoz_env
+pip install -r requirements.txt
+
+<span class="cm"># choose the user behaviors to simulate (any subset; each YAML is one mode):</span>
+<span class="cm">#   normal (collaborative) · unavailable_service · tangential</span>
+<span class="cm">#   emotional_acts (impatience) · fragment_dumping (incomplete utterance)</span>
+cp non_coll_normal.yaml non_coll_tangential.yaml non_coll_list/
+
+<span class="cm"># set N (trials), the models array, and API keys in run_dialogue_simulation.sh, then</span>
+./run_dialogue_simulation.sh
+./run_error_analysis.sh
+
+<span class="cm"># τ-bench environment: same workflow</span>
+cd ../tau_env &amp;&amp; conda create -n tau_env python=3.11 &amp;&amp; conda activate tau_env
+pip install -e .
+./run_dialogue_simulation.sh</pre>
+      <p class="tnote" style="margin-top:10px">Fine-tuned agents (<code>holi-lab/qwen-2.5-3b-multiwoz-finetuned</code> and others) and the MultiWOZ training sets are on <a href="https://huggingface.co/holi-lab">Hugging Face</a>; all dialogue logs behind the tables above are on <a href="https://drive.google.com/drive/u/0/folders/1_UQZlT3fjg38gLqhzxQCMY-AQdWDQtC9">Google Drive</a>. The <a href="https://github.com/holi-lab/NCUser#readme">README</a> covers configuration, vLLM serving, and training.</p>
+    </div>
+  </section>
+
+  <section class="block" id="bibtex">
+    <div class="wrap">
+      <div class="bibhead">
+        <h2 style="margin:0">BibTeX</h2>
+        <button type="button" class="copy" id="copyBib">Copy</button>
+      </div>
+<pre class="bib" id="bib">@inproceedings{shim2026noncollaborative,
+    title     = {Non-Collaborative User Simulators for Tool Agents},
+    author    = {Shim, Jeonghoon and Song, Woojung and Jin, Cheyon and Kook, Seungwon and Jo, Yohan},
+    booktitle = {The Fourteenth International Conference on Learning Representations},
+    year      = {2026},
+    url       = {https://openreview.net/forum?id=UAUimofy3W}
+}</pre>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><a href="https://github.com/holi-lab">Holi Lab</a>, Graduate School of Data Science, Seoul National University.</p>
+    <p>Supported by the National Research Foundation of Korea grant RS-2024-00333484, the Institute of Information &amp; Communications Technology Planning &amp; Evaluation grants IITP-2026-RS-2024-00397085 and RS-2025-02215122, all funded by the Korean government (MSIT), the Creative-Pioneering Researchers Program through Seoul National University, and Samsung Electronics Co., Ltd (IO250806-13387-01).</p>
+    <p>Page content is licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Code is released under the MIT License.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // Table 1 of the paper: success rate (SR) and SR relative to the collaborative mode.
+  var MODELS = ['GPT-4.1-mini', 'GPT-4.1-nano', 'Qwen3-235b-a22b', 'Qwen3-30b-a3b', 'Llama-3.1-70b-instruct'];
+  var MODES = [
+    { id: 'col', name: 'Collaborative', cls: 'k', sw: 'var(--k)' },
+    { id: 'una', name: 'Unavailable service', cls: 'u', sw: 'var(--u)' },
+    { id: 'tan', name: 'Tangential', cls: 't', sw: 'var(--t)' },
+    { id: 'imp', name: 'Impatience', cls: 'i', sw: 'var(--i)' },
+    { id: 'inc', name: 'Incomplete utterance', cls: 'n', sw: 'var(--n)' }
+  ];
+  var DATA = {
+    multiwoz: {
+      label: 'MultiWOZ',
+      sr:  [[92.7, 89.3, 89.3, 90.7, 88.2], [23.6, 16.9, 9.8, 26.7, 14.7], [77.8, 62.4, 57.3, 69.4, 69.9], [48.3, 47.2, 27.2, 41.0, 26.1], [62.6, 54.8, 49.4, 47.5, 48.6]],
+      rel: [[100, 96.3, 96.3, 97.8, 95.1], [100, 71.6, 41.5, 113.1, 62.3], [100, 80.2, 73.7, 89.2, 89.8], [100, 97.7, 56.3, 84.9, 54.0], [100, 87.5, 78.9, 75.9, 77.6]]
+    },
+    tau: {
+      label: 'τ-bench',
+      sr:  [[45.5, 41.7, 39.5, 45.1, 45.4], [12.0, 10.0, 6.8, 8.8, 8.0], [41.4, 36.8, 32.3, 37.6, 39.3], [27.9, 26.6, 20.4, 24.8, 30.1], [21.8, 18.5, 14.7, 17.8, 16.4]],
+      rel: [[100, 91.6, 86.8, 98.9, 99.8], [100, 83.3, 56.7, 72.5, 66.7], [100, 88.9, 78.0, 90.8, 94.9], [100, 95.3, 73.1, 88.9, 107.9], [100, 84.9, 67.4, 81.7, 75.2]]
+    }
+  };
+
+  var state = { bench: 'multiwoz', metric: 'sr', active: { col: true, una: true, tan: true, imp: true, inc: true } };
+  var svg = document.getElementById('bars');
+  var chips = document.getElementById('modeChips');
+  var statMean = document.getElementById('statMean');
+  var statMin = document.getElementById('statMin');
+  var statNote = document.getElementById('statNote');
+
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function buildChips() {
+    var html = '<span class="lab">Mode</span>';
+    MODES.forEach(function (m) {
+      html += '<button type="button" data-mode="' + m.id + '" aria-pressed="true" style="--sw:' + m.sw + '">' + esc(m.name) + '</button>';
+    });
+    chips.innerHTML = html;
+    chips.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-mode]');
+      if (!b) return;
+      var id = b.getAttribute('data-mode');
+      var onCount = MODES.filter(function (m) { return state.active[m.id]; }).length;
+      // Clicking the only active mode restores all modes; otherwise toggle.
+      if (state.active[id] && onCount === 1) {
+        MODES.forEach(function (m) { state.active[m.id] = true; });
+      } else {
+        state.active[id] = !state.active[id];
+      }
+      MODES.forEach(function (m) {
+        chips.querySelector('[data-mode="' + m.id + '"]').setAttribute('aria-pressed', state.active[m.id] ? 'true' : 'false');
+      });
+      render();
+    });
+  }
+
+  function render() {
+    var d = DATA[state.bench];
+    var vals = d[state.metric];
+    var isRel = state.metric === 'rel';
+    var W = 960, H = 340, padL = 44, padR = 10, padT = 18, padB = 46;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var ymax = isRel ? 120 : 100;
+    var y = function (v) { return padT + plotH * (1 - v / ymax); };
+    var groupW = plotW / MODELS.length;
+    var barW = 24, gap = 5;
+    var inner = MODES.length * barW + (MODES.length - 1) * gap;
+    var out = '';
+
+    // grid and axis
+    for (var g = 0; g <= ymax; g += 20) {
+      out += '<line class="grid" x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y(g).toFixed(1) + '" y2="' + y(g).toFixed(1) + '"/>';
+      out += '<text class="axis" x="' + (padL - 6) + '" y="' + (y(g) + 3.5).toFixed(1) + '" text-anchor="end">' + g + '</text>';
+    }
+    if (isRel) {
+      out += '<line class="base" x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y(100).toFixed(1) + '" y2="' + y(100).toFixed(1) + '"/>';
+      out += '<text class="baselab" x="' + (W - padR - 4) + '" y="' + (y(100) - 5).toFixed(1) + '" text-anchor="end">collaborative = 100</text>';
+    }
+
+    // groups
+    MODELS.forEach(function (name, gi) {
+      var x0 = padL + gi * groupW + (groupW - inner) / 2;
+      out += '<g class="grp">';
+      MODES.forEach(function (m, mi) {
+        var v = vals[gi][mi];
+        var x = x0 + mi * (barW + gap);
+        var top = y(v), h = y(0) - top;
+        var off = state.active[m.id] ? '' : ' off';
+        out += '<g class="b' + off + '">';
+        out += '<rect class="bar ' + m.cls + '" x="' + x.toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + barW + '" height="' + Math.max(h, 0).toFixed(1) + '"><title>' + esc(name) + ' · ' + esc(m.name) + ': ' + v.toFixed(1) + (isRel ? '% of collaborative' : '% success') + '</title></rect>';
+        out += '<text class="val" x="' + (x + barW / 2).toFixed(1) + '" y="' + (top - 4).toFixed(1) + '" text-anchor="middle">' + v.toFixed(1) + '</text>';
+        out += '</g>';
+      });
+      out += '<text class="lbl" x="' + (padL + gi * groupW + groupW / 2).toFixed(1) + '" y="' + (H - 24) + '" text-anchor="middle">' + esc(name) + '</text>';
+      out += '</g>';
+    });
+
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.innerHTML = out;
+
+    // footer stats: relative SR over the four behaviors and five models
+    var rel = d.rel, sum = 0, n = 0, min = Infinity, minWho = '';
+    rel.forEach(function (row, gi) {
+      for (var mi = 1; mi < row.length; mi++) {
+        sum += row[mi]; n++;
+        if (row[mi] < min) { min = row[mi]; minWho = MODELS[gi] + ' · ' + MODES[mi].name.toLowerCase(); }
+      }
+    });
+    statMean.textContent = (sum / n).toFixed(1) + '%';
+    statMin.textContent = minWho + ' (' + min.toFixed(1) + '%)';
+    statNote.textContent = d.label + ', ' + (isRel ? 'SR relative to the collaborative mode' : 'success rate in %');
+  }
+
+  document.querySelectorAll('.seg button[data-bench]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.bench = b.getAttribute('data-bench');
+      document.querySelectorAll('.seg button[data-bench]').forEach(function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+      render();
+    });
+  });
+  document.querySelectorAll('.seg button[data-metric]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.metric = b.getAttribute('data-metric');
+      document.querySelectorAll('.seg button[data-metric]').forEach(function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+      render();
+    });
+  });
+
+  buildChips();
+  render();
+
+  // BibTeX copy
+  var copyBtn = document.getElementById('copyBib');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', function () {
+      var text = document.getElementById('bib').textContent;
+      var done = function () { copyBtn.textContent = 'Copied'; setTimeout(function () { copyBtn.textContent = 'Copy'; }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { fallback(text); done(); });
+      } else { fallback(text); done(); }
+    });
+  }
+  function fallback(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'absolute'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+})();
+</script>
+</body>
+</html>
